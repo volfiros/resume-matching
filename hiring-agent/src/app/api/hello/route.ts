@@ -5,6 +5,22 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  return NextResponse.json({ message: 'Data received', data: body });
+  try {
+    const body = await request.json();
+    
+    // Validate that body is not empty
+    if (!body || Object.keys(body).length === 0) {
+      return NextResponse.json(
+        { error: 'Request body cannot be empty' },
+        { status: 400 }
+      );
+    }
+    
+    return NextResponse.json({ message: 'Data received', data: body });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Invalid JSON in request body' },
+      { status: 400 }
+    );
+  }
 }
