@@ -1,65 +1,199 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useRef, useState } from "react";
+
+export default function Home(): JSX.Element {
+  const jobInputRef = useRef<HTMLInputElement | null>(null);
+  const resumeInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [jobFileName, setJobFileName] = useState<string | null>(null);
+  const [jobText, setJobText] = useState<string | null>(null);
+  const [jobError, setJobError] = useState<string | null>(null);
+
+  const [resumeFileName, setResumeFileName] = useState<string | null>(null);
+  const [resumeError, setResumeError] = useState<string | null>(null);
+
+  function openJobPicker() {
+    jobInputRef.current?.click();
+  }
+  function openResumePicker() {
+    resumeInputRef.current?.click();
+  }
+
+  function onJobFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setJobError(null);
+    setJobText(null);
+    setJobFileName(null);
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const name = file.name || "";
+    const isTxtByName = /\.txt$/i.test(name);
+    const isTxtByType = file.type === "text/plain";
+
+    if (!isTxtByName && !isTxtByType) {
+      setJobError("Job description must be a .txt file.");
+      e.currentTarget.value = "";
+      return;
+    }
+
+    setJobFileName(name);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === "string" ? reader.result : "";
+      setJobText(text);
+    };
+    reader.onerror = () => {
+      setJobError("Failed to read the job description file.");
+    };
+    reader.readAsText(file);
+  }
+
+  function onResumeFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setResumeError(null);
+    setResumeFileName(null);
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const name = file.name || "";
+    const allowed = /\.(pdf|doc|docx)$/i.test(name);
+    const mimeAllowed =
+      file.type === "application/pdf" ||
+      file.type === "application/msword" ||
+      file.type ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+    if (!allowed && !mimeAllowed) {
+      setResumeError("Resume must be a .pdf, .doc or .docx file.");
+      e.currentTarget.value = "";
+      return;
+    }
+
+    setResumeFileName(name);
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="min-h-screen bg-black flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-3xl text-white">
+        <h1 className="text-2xl font-semibold mb-6">Upload job & resume</h1>
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={openJobPicker}
+              className="cursor-pointer bg-white text-black px-5 py-2 rounded-md shadow hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-white/30"
+            >
+              Upload Job Description (.txt)
+            </button>
+
+            <button
+              type="button"
+              onClick={openResumePicker}
+              className="cursor-pointer bg-white text-black px-5 py-2 rounded-md shadow hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-white/30"
+            >
+              Upload Resume (.pdf/.doc/.docx)
+            </button>
+          </div>
+
+          <div className="text-sm text-white/80 mt-3 sm:mt-0">
+            <div>
+              <strong>Job:</strong>{" "}
+              {jobFileName ? (
+                <span className="font-medium text-white">{jobFileName}</span>
+              ) : (
+                <span className="text-white/60">No file chosen</span>
+              )}
+            </div>
+            <div className="mt-1">
+              <strong>Resume:</strong>{" "}
+              {resumeFileName ? (
+                <span className="font-medium text-white">{resumeFileName}</span>
+              ) : (
+                <span className="text-white/60">No file chosen</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <input
+          ref={jobInputRef}
+          type="file"
+          accept=".txt,text/plain"
+          className="hidden"
+          onChange={onJobFileChange}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+        <input
+          ref={resumeInputRef}
+          type="file"
+          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          className="hidden"
+          onChange={onResumeFileChange}
+        />
+
+        <div className="space-y-2 mb-6">
+          {jobError && (
+            <div className="text-red-400 text-sm bg-white/5 p-2 rounded">
+              {jobError}
+            </div>
+          )}
+          {resumeError && (
+            <div className="text-red-400 text-sm bg-white/5 p-2 rounded">
+              {resumeError}
+            </div>
+          )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="mb-6">
+          <h2 className="text-lg font-medium mb-2">Job description preview</h2>
+          {jobText ? (
+            <div className="bg-white/5 p-4 rounded text-white/90 whitespace-pre-wrap max-h-72 overflow-auto">
+              {jobText}
+            </div>
+          ) : (
+            <div className="text-white/60">No job text loaded.</div>
+          )}
         </div>
-      </main>
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (!jobFileName) {
+                setJobError(
+                  "Please upload a .txt job description before saving.",
+                );
+                return;
+              }
+              alert(
+                "Files validated locally. Implement upload logic to persist.",
+              );
+            }}
+            className="cursor-pointer bg-white text-black px-4 py-2 rounded-md shadow hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-white/30"
+          >
+            Check Match
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setJobFileName(null);
+              setJobText(null);
+              setJobError(null);
+              setResumeFileName(null);
+              setResumeError(null);
+              if (jobInputRef.current) jobInputRef.current.value = "";
+              if (resumeInputRef.current) resumeInputRef.current.value = "";
+            }}
+            className="cursor-pointer bg-white/5 border border-white/10 text-white px-4 py-2 rounded-md hover:bg-white/6 focus:outline-none"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
