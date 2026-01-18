@@ -9,52 +9,43 @@ export async function documentParserAgent(
 ): Promise<AgentState> {
   console.log("Document Parser Agent: Starting...");
 
-  try {
-    let resumeText = "";
-    if (resumeBuffer && resumeFilename) {
-      try {
-        console.log(
-          `Document Parser Agent: parsing resume ${resumeFilename} (bytes=${resumeBuffer.byteLength ?? (resumeBuffer as Buffer).length})`,
-        );
+  let resumeText = "";
 
-        const parsed = await parseDocument(resumeBuffer, resumeFilename);
-
-        resumeText = parsed ?? "";
-
-        if (!resumeText || resumeText.trim().length < 50) {
-          console.warn(
-            "Document Parser Agent: parsed resume text is unexpectedly short",
-            { filename: resumeFilename, length: resumeText?.length ?? 0 },
-          );
-        } else {
-          console.log(
-            `Document Parser Agent: Extracted ${resumeText.length} characters`,
-          );
-        }
-      } catch (parseErr) {
-        console.error(
-          "Document Parser Agent: Failed to parse resume. Continuing without resume text.",
-          {
-            filename: resumeFilename,
-            error:
-              parseErr instanceof Error ? parseErr.message : String(parseErr),
-          },
-        );
-        resumeText = "";
-      }
-    } else {
+  if (resumeBuffer && resumeFilename) {
+    try {
       console.log(
-        "Document Parser Agent: No resume provided; skipping parsing.",
+        `Document Parser Agent: Parsing ${resumeFilename} (${resumeBuffer.length} bytes)`,
+      );
+
+      resumeText = await parseDocument(resumeBuffer, resumeFilename);
+
+      if (!resumeText || resumeText.trim().length < 50) {
+        console.warn(
+          `Warning: Parsed resume text is very short (${resumeText?.length ?? 0} chars). ` +
+            `This might indicate a parsing issue.`,
+        );
+      } else {
+        console.log(
+          `Document Parser Agent: Successfully extracted ${resumeText.length} characters`,
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Document Parser Agent: Failed to parse resume:",
+        error instanceof Error ? error.message : String(error),
+      );
+
+      throw new Error(
+        `Failed to parse resume: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
-
-    return {
-      ...state,
-      resumeText,
-      jobDescription,
-    };
-  } catch (error) {
-    console.error("Document Parser Agent failed:", error);
-    throw error;
+  } else {
+    console.log("Document Parser Agent: No resume provided, skipping parsing");
   }
+
+  return {
+    ...state,
+    resumeText,
+    jobDescription,
+  };
 }

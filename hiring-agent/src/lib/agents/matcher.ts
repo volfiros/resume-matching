@@ -47,7 +47,7 @@ Return JSON:
     }>(response);
 
     console.log(
-      `🎯 Matcher Agent: ${matchDetails.skillMatches.length} skills matched, ${matchDetails.skillGaps.length} gaps`,
+      `Matcher Agent: ${matchDetails.skillMatches.length} skills matched, ${matchDetails.skillGaps.length} gaps`,
     );
 
     return {

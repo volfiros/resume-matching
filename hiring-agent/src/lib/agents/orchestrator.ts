@@ -5,73 +5,122 @@ import { jobAnalyzerAgent } from "./jobAnalyzer";
 import { matcherAgent } from "./matcher";
 import { decisionMakerAgent } from "./decisionMaker";
 
-/**
- * runScreeningPipeline
- *
- * Runs the end-to-end screening pipeline. This function:
- * - Accepts an optional resume buffer + filename (may be null when client sends only job text).
- * - Attempts to parse the resume when provided. If parsing fails, logs the error and proceeds
- *   with a minimal state containing only the jobDescription so downstream agents can still run.
- * - Runs the rest of the agents in sequence and returns the final ScreeningResult.
- *
- * The function is defensive: it never throws for resume parsing failures (parsing errors are
- * logged and the pipeline continues). If any downstream step fails, it returns a safe fallback
- * ScreeningResult asking for manual review.
- */
 export async function runScreeningPipeline(
   resumeBuffer: Buffer | null,
   resumeFilename: string | null,
   jobDescription: string,
 ): Promise<ScreeningResult> {
-  console.log("Starting Screening Pipeline...");
+  console.log("=== Starting Screening Pipeline ===");
+  console.log(`Resume: ${resumeFilename || "Not provided"}`);
+  console.log(`Job Description: ${jobDescription.substring(0, 100)}...`);
 
   try {
-    // Start with a minimal state containing the job description.
-    let state: AgentState = { jobDescription };
+    // Step 1: Parse documents
+    let state: AgentState;
 
-    // If a resume buffer + filename are provided, try to parse it.
-    if (resumeBuffer && resumeFilename) {
-      try {
-        console.log(
-          `Orchestrator: parsing resume '${resumeFilename}' (bytes=${resumeBuffer.byteLength ?? resumeBuffer.length})`,
-        );
-        state = await documentParserAgent(
-          resumeBuffer,
-          resumeFilename,
-          jobDescription,
-        );
-      } catch (parseErr) {
-        // Log parse error, but continue the pipeline using only jobDescription.
-        console.error(
-          "Orchestrator: documentParserAgent failed, continuing without resumeText:",
-          parseErr instanceof Error ? parseErr.message : String(parseErr),
-        );
-        state = { jobDescription };
-      }
-    } else {
-      console.log(
-        "Orchestrator: no resume buffer provided, continuing with job description only.",
+    try {
+      state = await documentParserAgent(
+        resumeBuffer,
+        resumeFilename,
+        jobDescription,
       );
+
+      if (!state.resumeText || state.resumeText.trim().length === 0) {
+        throw new Error("Resume parsing produced no text");
+      }
+    } catch (parseError) {
+      console.error("Document parsing failed:", parseError);
+      return {
+        match_score: 0,
+        recommendation: "Needs manual review",
+        requires_human: true,
+        confidence: 0,
+        reasoning_summary: `Failed to parse resume: ${
+          parseError instanceof Error ? parseError.message : "Unknown error"
+        }. Please verify the file format and try again.`,
+      };
     }
 
-    // Continue pipeline
-    state = await skillExtractorAgent(state);
-    state = await jobAnalyzerAgent(state);
-    state = await matcherAgent(state);
-    const result = await decisionMakerAgent(state);
+    // Step 2: Extract skills from resume
+    try {
+      state = await skillExtractorAgent(state);
+    } catch (error) {
+      console.error("Skill extraction failed:", error);
+      return {
+        match_score: 0,
+        recommendation: "Needs manual review",
+        requires_human: true,
+        confidence: 0,
+        reasoning_summary: `Failed to extract skills from resume: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      };
+    }
 
-    console.log("Screening Pipeline Complete!");
+    // Step 3: Analyze job requirements
+    try {
+      state = await jobAnalyzerAgent(state);
+    } catch (error) {
+      console.error("Job analysis failed:", error);
+      return {
+        match_score: 0,
+        recommendation: "Needs manual review",
+        requires_human: true,
+        confidence: 0,
+        reasoning_summary: `Failed to analyze job requirements: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      };
+    }
+
+    // Step 4: Match candidate with job
+    try {
+      state = await matcherAgent(state);
+    } catch (error) {
+      console.error("Matching failed:", error);
+      return {
+        match_score: 0,
+        recommendation: "Needs manual review",
+        requires_human: true,
+        confidence: 0,
+        reasoning_summary: `Failed to match candidate with job: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      };
+    }
+
+    // Step 5: Make final decision
+    let result: ScreeningResult;
+    try {
+      result = await decisionMakerAgent(state);
+    } catch (error) {
+      console.error("Decision making failed:", error);
+      return {
+        match_score: 0,
+        recommendation: "Needs manual review",
+        requires_human: true,
+        confidence: 0,
+        reasoning_summary: `Failed to make hiring decision: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      };
+    }
+
+    console.log("=== Screening Pipeline Complete ===");
+    console.log(`Result: ${result.recommendation}`);
+    console.log(`Match Score: ${result.match_score}`);
+
     return result;
   } catch (error) {
-    console.error("Pipeline failed:", error);
-
-    // Safe fallback result that indicates manual review is needed.
+    console.error("Unexpected pipeline error:", error);
     return {
       match_score: 0,
       recommendation: "Needs manual review",
       requires_human: true,
       confidence: 0,
-      reasoning_summary: `System error: ${error instanceof Error ? error.message : String(error)}. Manual review required.`,
+      reasoning_summary: `System error: ${
+        error instanceof Error ? error.message : String(error)
+      }. Manual review required.`,
     };
   }
 }

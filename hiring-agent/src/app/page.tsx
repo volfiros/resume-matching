@@ -48,7 +48,6 @@ export default function Home(): React.ReactElement {
   const [jobError, setJobError] = useState<string | null>(null);
 
   const [resumeFileName, setResumeFileName] = useState<string | null>(null);
-  // New state to keep the actual File so we can send it to the server
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [resumeError, setResumeError] = useState<string | null>(null);
 
@@ -107,7 +106,6 @@ export default function Home(): React.ReactElement {
     if (!file) return;
 
     const name = file.name || "";
-    // Accept PDF and DOCX on the client side now (docx and doc optionally)
     const allowed = /\.(pdf|docx|doc)$/i.test(name);
     const mimeAllowed =
       file.type === "application/pdf" ||

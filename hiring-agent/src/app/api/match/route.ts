@@ -1,32 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runScreeningPipeline } from "@/lib/agents/orchestrator";
 
-/**
- * POST /api/match
- *
- * Expects multipart/form-data with:
- *  - resume: File (pdf/doc/docx)
- *  - jobDescription (string) OR job_text
- *
- * The resume file is read into a Buffer and passed to the screening pipeline
- * along with the filename and job description text.
- */
 export async function POST(request: NextRequest) {
   try {
-    const contentType = (
-      request.headers.get("content-type") || ""
-    ).toLowerCase();
-
-    // Log incoming content-type for debugging parser issues
-    console.log("API /api/match - Incoming Content-Type:", contentType);
-
-    if (!contentType.includes("multipart/form-data")) {
-      return NextResponse.json(
-        { error: 'Content-Type must be "multipart/form-data"' },
-        { status: 415 },
-      );
-    }
-
     const formData = await request.formData();
 
     const resumeField = formData.get("resume");
@@ -36,6 +12,7 @@ export async function POST(request: NextRequest) {
       formData.get("job") ??
       null;
 
+    // Validate inputs
     if (!resumeField) {
       return NextResponse.json(
         { error: "Resume file is required" },
@@ -50,27 +27,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // resumeField should be a File-like object with arrayBuffer() and name
-    // Use a safe cast to access arrayBuffer() in the server environment
-    // (Next.js provides a File-like object from formData in server handlers).
-    // If arrayBuffer is not a function, we'll return an error.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const resumeCandidate: any = resumeField;
-
-    if (typeof resumeCandidate.arrayBuffer !== "function") {
+    if (!(resumeField instanceof File)) {
       return NextResponse.json(
-        { error: "Uploaded resume is not a valid file" },
+        { error: "Resume must be a file" },
         { status: 400 },
       );
     }
 
-    const ab = await resumeCandidate.arrayBuffer();
-    const buffer = Buffer.from(ab);
-    const filename = resumeCandidate.name ?? "resume";
+    const filename = resumeField.name;
+    const ext = filename.toLowerCase().split(".").pop() ?? "";
 
-    // Server-side validation: only allow PDF and DOCX files.
-    const ext = (filename || "").toLowerCase().split(".").pop() ?? "";
-    if (!["pdf", "docx"].includes(ext)) {
+    if (!["pdf", "docx", "doc"].includes(ext)) {
       return NextResponse.json(
         {
           error:
@@ -80,7 +47,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call the screening pipeline with the resume buffer, filename and job description
+    const arrayBuffer = await resumeField.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    console.log(
+      `API: Processing file ${filename}, size: ${buffer.length} bytes`,
+    );
+
     const jobDescription = String(jobField);
 
     const result = await runScreeningPipeline(buffer, filename, jobDescription);
