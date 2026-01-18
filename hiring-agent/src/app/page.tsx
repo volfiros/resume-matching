@@ -1,8 +1,45 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import { ScreeningResult } from "@/lib/types";
 
-export default function Home(): JSX.Element {
+type MatchResponse = ScreeningResult;
+
+function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
+  return (
+    <div className="bg-white/5 p-4 rounded text-white">
+      <h3 className="text-lg font-semibold mb-2">Match Result</h3>
+      <div className="grid grid-cols-1 gap-2 text-sm">
+        <div>
+          <strong>Match score:</strong>{" "}
+          <span className="font-medium">{data.match_score?.toFixed(2)}</span>
+        </div>
+        <div>
+          <strong>Recommendation:</strong>{" "}
+          <span className="font-medium">{data.recommendation}</span>
+        </div>
+        <div>
+          <strong>Requires human:</strong>{" "}
+          <span className="font-medium">
+            {data.requires_human ? "Yes" : "No"}
+          </span>
+        </div>
+        <div>
+          <strong>Confidence:</strong>{" "}
+          <span className="font-medium">{data.confidence?.toFixed(2)}</span>
+        </div>
+        <div>
+          <strong>Reasoning summary:</strong>
+          <div className="mt-2 whitespace-pre-wrap text-sm text-white/90">
+            {data.reasoning_summary}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function Home(): React.ReactElement {
   const jobInputRef = useRef<HTMLInputElement | null>(null);
   const resumeInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -11,7 +48,13 @@ export default function Home(): JSX.Element {
   const [jobError, setJobError] = useState<string | null>(null);
 
   const [resumeFileName, setResumeFileName] = useState<string | null>(null);
+  // New state to keep the actual File so we can send it to the server
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [resumeError, setResumeError] = useState<string | null>(null);
+
+  const [isChecking, setIsChecking] = useState(false);
+  const [matchResult, setMatchResult] = useState<MatchResponse | null>(null);
+  const [matchError, setMatchError] = useState<string | null>(null);
 
   function openJobPicker() {
     jobInputRef.current?.click();
@@ -24,6 +67,8 @@ export default function Home(): JSX.Element {
     setJobError(null);
     setJobText(null);
     setJobFileName(null);
+    setMatchResult(null);
+    setMatchError(null);
 
     const file = e.target.files?.[0];
     if (!file) return;
@@ -54,12 +99,16 @@ export default function Home(): JSX.Element {
   function onResumeFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     setResumeError(null);
     setResumeFileName(null);
+    setResumeFile(null);
+    setMatchResult(null);
+    setMatchError(null);
 
     const file = e.target.files?.[0];
     if (!file) return;
 
     const name = file.name || "";
-    const allowed = /\.(pdf|doc|docx)$/i.test(name);
+    // Accept PDF and DOCX on the client side now (docx and doc optionally)
+    const allowed = /\.(pdf|docx|doc)$/i.test(name);
     const mimeAllowed =
       file.type === "application/pdf" ||
       file.type === "application/msword" ||
@@ -73,6 +122,65 @@ export default function Home(): JSX.Element {
     }
 
     setResumeFileName(name);
+    setResumeFile(file);
+  }
+
+  async function checkMatch() {
+    setMatchError(null);
+    setMatchResult(null);
+
+    if (!jobText) {
+      setJobError(
+        "Please upload a .txt job description before checking match.",
+      );
+      return;
+    }
+
+    const resumeToSend = resumeFile ?? resumeInputRef.current?.files?.[0];
+    if (!resumeToSend) {
+      setResumeError("Please upload a resume file before checking match.");
+      return;
+    }
+
+    setIsChecking(true);
+    try {
+      const formData = new FormData();
+      formData.append("resume", resumeToSend);
+      formData.append("jobDescription", jobText);
+
+      const resp = await fetch("/api/match", {
+        method: "POST",
+        // DO NOT set the Content-Type header when sending FormData; the browser will set the boundary.
+        body: formData,
+      });
+
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(text || `Status ${resp.status}`);
+      }
+
+      const data = (await resp.json()) as MatchResponse;
+      setMatchResult(data);
+    } catch (err) {
+      const e = err as Error | undefined;
+      setMatchError(e?.message || "Failed to fetch match result.");
+    } finally {
+      setIsChecking(false);
+    }
+  }
+
+  function onReset() {
+    setJobFileName(null);
+    setJobText(null);
+    setJobError(null);
+    setResumeFileName(null);
+    setResumeFile(null);
+    setResumeError(null);
+    setMatchResult(null);
+    setMatchError(null);
+    setIsChecking(false);
+    if (jobInputRef.current) jobInputRef.current.value = "";
+    if (resumeInputRef.current) resumeInputRef.current.value = "";
   }
 
   return (
@@ -158,41 +266,32 @@ export default function Home(): JSX.Element {
           )}
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 mb-6">
           <button
             type="button"
-            onClick={() => {
-              if (!jobFileName) {
-                setJobError(
-                  "Please upload a .txt job description before saving.",
-                );
-                return;
-              }
-              alert(
-                "Files validated locally. Implement upload logic to persist.",
-              );
-            }}
-            className="cursor-pointer bg-white text-black px-4 py-2 rounded-md shadow hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-white/30"
+            onClick={checkMatch}
+            disabled={isChecking}
+            className="cursor-pointer bg-white text-black px-4 py-2 rounded-md shadow hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:opacity-60"
           >
-            Check Match
+            {isChecking ? "Checking..." : "Check Match"}
           </button>
 
           <button
             type="button"
-            onClick={() => {
-              setJobFileName(null);
-              setJobText(null);
-              setJobError(null);
-              setResumeFileName(null);
-              setResumeError(null);
-              if (jobInputRef.current) jobInputRef.current.value = "";
-              if (resumeInputRef.current) resumeInputRef.current.value = "";
-            }}
+            onClick={onReset}
             className="cursor-pointer bg-white/5 border border-white/10 text-white px-4 py-2 rounded-md hover:bg-white/6 focus:outline-none"
           >
             Reset
           </button>
         </div>
+
+        {matchResult && <MatchResult data={matchResult} />}
+
+        {matchError && (
+          <div className="text-red-400 text-sm bg-white/5 p-2 rounded mt-3">
+            Failed to check match.
+          </div>
+        )}
       </div>
     </div>
   );
