@@ -10,7 +10,7 @@ export interface AgentState {
     preferredSkills: string[];
     experienceYears?: number;
     education?: string;
-  };
+    isVague?: boolean;
   matchDetails?: {
     skillMatches: string[];
     skillGaps: string[];

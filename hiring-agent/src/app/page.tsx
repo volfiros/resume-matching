@@ -148,7 +148,6 @@ export default function Home(): React.ReactElement {
 
       const resp = await fetch("/api/match", {
         method: "POST",
-        // DO NOT set the Content-Type header when sending FormData; the browser will set the boundary.
         body: formData,
       });
 
@@ -158,6 +157,7 @@ export default function Home(): React.ReactElement {
       }
 
       const data = (await resp.json()) as MatchResponse;
+      console.log(data);
       setMatchResult(data);
     } catch (err) {
       const e = err as Error | undefined;

@@ -6,6 +6,24 @@ export async function decisionMakerAgent(
 ): Promise<ScreeningResult> {
   console.log("Decision Maker Agent: Starting...");
 
+  if (state.jobRequirements?.isVague) {
+    console.log(
+      "Decision Maker: Job description is vague - requiring manual review",
+    );
+    return {
+      match_score: 0,
+      recommendation: "Needs manual review",
+      requires_human: true,
+      confidence: 0,
+      reasoning_summary:
+        "The job description lacks specific technical requirements and clear criteria. " +
+        "It contains mostly generic terms like 'coding skills', 'team player', etc. " +
+        "Manual review is required to clarify job requirements before candidate evaluation can proceed. " +
+        "Please provide a more detailed job description with specific technologies, frameworks, " +
+        "and concrete qualifications needed for this role.",
+    };
+  }
+
   const prompt = `
 You are a hiring decision assistant. Based on the analysis, make a hiring recommendation.
 
