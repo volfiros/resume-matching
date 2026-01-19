@@ -11,6 +11,7 @@ export interface AgentState {
     experienceYears?: number;
     education?: string;
     isVague?: boolean;
+  };
   matchDetails?: {
     skillMatches: string[];
     skillGaps: string[];
