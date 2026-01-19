@@ -61,7 +61,7 @@ GUIDELINES:
     const decision = parseAIResponse<ScreeningResult>(response);
 
     console.log(
-      `🎓 Decision Maker Agent: ${decision.recommendation} (score: ${decision.match_score})`,
+      `Decision Maker Agent: ${decision.recommendation} (score: ${decision.match_score})`,
     );
 
     return decision;

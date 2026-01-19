@@ -41,7 +41,6 @@ export async function runScreeningPipeline(
       };
     }
 
-    // Step 2: Extract skills from resume
     try {
       state = await skillExtractorAgent(state);
     } catch (error) {
@@ -57,7 +56,6 @@ export async function runScreeningPipeline(
       };
     }
 
-    // Step 3: Analyze job requirements
     try {
       state = await jobAnalyzerAgent(state);
     } catch (error) {
@@ -73,7 +71,6 @@ export async function runScreeningPipeline(
       };
     }
 
-    // Step 4: Match candidate with job
     try {
       state = await matcherAgent(state);
     } catch (error) {
@@ -89,7 +86,6 @@ export async function runScreeningPipeline(
       };
     }
 
-    // Step 5: Make final decision
     let result: ScreeningResult;
     try {
       result = await decisionMakerAgent(state);
