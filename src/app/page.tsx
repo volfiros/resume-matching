@@ -5,7 +5,6 @@ import { ScreeningResult } from "@/lib/types";
 
 type MatchResponse = ScreeningResult;
 
-// Helper function to convert numerical values to qualitative labels
 function getQualitativeScore(value: number | undefined): {
   label: string;
   color: string;
@@ -17,30 +16,27 @@ function getQualitativeScore(value: number | undefined): {
       color: "text-slate-400",
       bgColor: "bg-slate-500/10",
     };
-
-  if (value >= 0.8) {
+  if (value >= 0.8)
     return {
       label: "Excellent",
       color: "text-emerald-400",
       bgColor: "bg-emerald-500/10",
     };
-  } else if (value >= 0.6) {
+  if (value >= 0.6)
     return { label: "Good", color: "text-blue-400", bgColor: "bg-blue-500/10" };
-  } else if (value >= 0.4) {
+  if (value >= 0.4)
     return {
       label: "Moderate",
       color: "text-amber-400",
       bgColor: "bg-amber-500/10",
     };
-  } else if (value >= 0.2) {
+  if (value >= 0.2)
     return {
       label: "Low",
       color: "text-orange-400",
       bgColor: "bg-orange-500/10",
     };
-  } else {
-    return { label: "Poor", color: "text-red-400", bgColor: "bg-red-500/10" };
-  }
+  return { label: "Poor", color: "text-red-400", bgColor: "bg-red-500/10" };
 }
 
 function getRecommendationStyle(recommendation: string): {
@@ -57,40 +53,38 @@ function getRecommendationStyle(recommendation: string): {
       bgColor: "bg-emerald-500/10",
       borderColor: "border-emerald-500/30",
     };
-  } else if (lower.includes("manual") || lower.includes("review")) {
+  }
+  if (lower.includes("manual") || lower.includes("review")) {
     return {
       icon: "⚠",
       color: "text-amber-400",
       bgColor: "bg-amber-500/10",
       borderColor: "border-amber-500/30",
     };
-  } else {
-    return {
-      icon: "✗",
-      color: "text-red-400",
-      bgColor: "bg-red-500/10",
-      borderColor: "border-red-500/30",
-    };
   }
+  return {
+    icon: "✗",
+    color: "text-red-400",
+    bgColor: "bg-red-500/10",
+    borderColor: "border-red-500/30",
+  };
 }
 
 function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
   const matchScore = getQualitativeScore(data.match_score);
   const confidence = getQualitativeScore(data.confidence);
   const recommendation = getRecommendationStyle(data.recommendation);
-
-  // Check if this is a manual review case
   const isManualReview =
     recommendation.color === "text-amber-400" ||
     data.recommendation.toLowerCase().includes("manual") ||
     data.recommendation.toLowerCase().includes("review");
 
   return (
-    <div className="glass-card rounded-2xl p-8 slide-up">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/30 to-purple-500/30 border border-indigo-400/30 flex items-center justify-center shimmer">
+    <div className="glass-card rounded-2xl p-4 sm:p-6 md:p-8 slide-up">
+      <div className="flex items-center gap-3 mb-4 sm:mb-6">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-indigo-500/30 to-purple-500/30 border border-indigo-400/30 flex items-center justify-center shimmer">
           <svg
-            className="w-6 h-6 text-indigo-300"
+            className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-300"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -103,15 +97,15 @@ function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
             />
           </svg>
         </div>
-        <h3 className="text-2xl font-semibold text-white">Match Results</h3>
+        <h3 className="text-xl sm:text-2xl font-semibold text-white">
+          Match Results
+        </h3>
       </div>
 
-      {/* Main Stats Grid - Only show if NOT manual review */}
       {!isManualReview && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {/* Match Score Card */}
-          <div className="glass-card rounded-xl p-6 scale-in card-hover">
-            <div className="flex items-center justify-between mb-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div className="glass-card rounded-xl p-4 sm:p-6 scale-in card-hover">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
               <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">
                 Match Score
               </span>
@@ -119,16 +113,15 @@ function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
                 className={`w-2 h-2 rounded-full ${matchScore.bgColor}`}
               ></div>
             </div>
-            <div className={`text-3xl font-semibold ${matchScore.color} mb-2`}>
+            <div
+              className={`text-2xl sm:text-3xl font-semibold ${matchScore.color} mb-2`}
+            >
               {matchScore.label}
             </div>
             <div className="w-full bg-slate-800/50 rounded-full h-1.5 overflow-hidden">
               <div
                 className={`h-full ${matchScore.bgColor} progress-animate`}
-                style={{
-                  width: `${(data.match_score ?? 0) * 100}%`,
-                  backgroundColor: matchScore.color.replace("text-", "rgb("),
-                }}
+                style={{ width: `${(data.match_score ?? 0) * 100}%` }}
               ></div>
             </div>
             <div className="text-xs text-slate-500 mt-2">
@@ -136,12 +129,11 @@ function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
             </div>
           </div>
 
-          {/* Confidence Card */}
           <div
-            className="glass-card rounded-xl p-6 scale-in card-hover"
+            className="glass-card rounded-xl p-4 sm:p-6 scale-in card-hover"
             style={{ animationDelay: "0.1s" }}
           >
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
               <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">
                 Confidence
               </span>
@@ -149,7 +141,9 @@ function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
                 className={`w-2 h-2 rounded-full ${confidence.bgColor}`}
               ></div>
             </div>
-            <div className={`text-3xl font-semibold ${confidence.color} mb-2`}>
+            <div
+              className={`text-2xl sm:text-3xl font-semibold ${confidence.color} mb-2`}
+            >
               {confidence.label}
             </div>
             <div className="w-full bg-slate-800/50 rounded-full h-1.5 overflow-hidden">
@@ -158,7 +152,6 @@ function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
                 style={{
                   width: `${(data.confidence ?? 0) * 100}%`,
                   animationDelay: "0.1s",
-                  backgroundColor: confidence.color.replace("text-", "rgb("),
                 }}
               ></div>
             </div>
@@ -169,25 +162,26 @@ function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
         </div>
       )}
 
-      {/* Recommendation Banner */}
       <div
-        className={`${recommendation.bgColor} border ${recommendation.borderColor} rounded-xl p-6 mb-6 slide-in-right`}
+        className={`${recommendation.bgColor} border ${recommendation.borderColor} rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 slide-in-right`}
       >
-        <div className="flex items-start gap-4">
-          <div className={`text-2xl ${recommendation.color}`}>
+        <div className="flex items-start gap-3 sm:gap-4">
+          <div className={`text-xl sm:text-2xl ${recommendation.color}`}>
             {recommendation.icon}
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h4 className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-2">
               Recommendation
             </h4>
-            <p className={`text-lg font-semibold ${recommendation.color} mb-2`}>
+            <p
+              className={`text-base sm:text-lg font-semibold ${recommendation.color} mb-2 break-words`}
+            >
               {data.recommendation}
             </p>
             {data.requires_human && (
               <div className="flex items-center gap-2 mt-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-amber-400 pulse-subtle"></div>
-                <span className="text-sm text-amber-400 font-medium">
+                <span className="text-xs sm:text-sm text-amber-400 font-medium">
                   Human review required
                 </span>
               </div>
@@ -196,14 +190,13 @@ function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
         </div>
       </div>
 
-      {/* Reasoning Summary */}
       <div
-        className="glass-card rounded-xl p-6 fade-in"
+        className="glass-card rounded-xl p-4 sm:p-6 fade-in"
         style={{ animationDelay: "0.2s" }}
       >
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-3 sm:mb-4">
           <svg
-            className="w-5 h-5 text-indigo-400"
+            className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -219,7 +212,7 @@ function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
             Detailed Analysis
           </h4>
         </div>
-        <div className="text-slate-300 leading-relaxed whitespace-pre-wrap text-sm">
+        <div className="text-slate-300 leading-relaxed whitespace-pre-wrap text-xs sm:text-sm break-words">
           {data.reasoning_summary}
         </div>
       </div>
@@ -227,7 +220,6 @@ function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
   );
 }
 
-// Static particles data - deterministic and consistent
 const staticParticlesData = [
   { id: 0, width: 5, height: 4, left: 7, duration: 30, delay: 0 },
   { id: 1, width: 4, height: 3, left: 20, duration: 32, delay: 1 },
@@ -246,7 +238,6 @@ const staticParticlesData = [
   { id: 14, width: 6, height: 7, left: 89, duration: 22, delay: 4 },
 ];
 
-// Floating particles component
 function FloatingParticles() {
   return (
     <div className="particles">
@@ -267,7 +258,6 @@ function FloatingParticles() {
   );
 }
 
-// Bubble animation component
 function BubbleAnimation() {
   const bubbles = [
     { id: 1, size: 80, left: 10, duration: 8, delay: 0, drift: "50px" },
@@ -323,6 +313,7 @@ export default function Home(): React.ReactElement {
   function openJobPicker() {
     jobInputRef.current?.click();
   }
+
   function openResumePicker() {
     resumeInputRef.current?.click();
   }
@@ -422,7 +413,6 @@ export default function Home(): React.ReactElement {
       }
 
       const data = (await resp.json()) as MatchResponse;
-      console.log(data);
       setMatchResult(data);
     } catch (err) {
       const e = err as Error | undefined;
@@ -447,23 +437,20 @@ export default function Home(): React.ReactElement {
   }
 
   return (
-    <div className="min-h-screen animated-bg flex items-center justify-center px-4 py-12">
-      {/* Animated Background Elements */}
+    <div className="min-h-screen animated-bg flex items-center justify-center px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
       <BubbleAnimation />
       <FloatingParticles />
 
-      {/* Animated Orbs */}
       <div className="orb orb-1"></div>
       <div className="orb orb-2"></div>
       <div className="orb orb-3"></div>
 
       <div className="w-full max-w-5xl relative z-10">
-        {/* Header */}
-        <div className="text-center mb-12 fade-in">
-          <div className="inline-block mb-4">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-indigo-500/30 to-purple-500/30 border border-indigo-400/30 flex items-center justify-center float">
+        <div className="text-center mb-8 sm:mb-10 md:mb-12 fade-in">
+          <div className="inline-block mb-3 sm:mb-4">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 mx-auto rounded-2xl bg-gradient-to-br from-indigo-500/30 to-purple-500/30 border border-indigo-400/30 flex items-center justify-center float">
               <svg
-                className="w-8 h-8 text-indigo-300"
+                className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-indigo-300"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -477,19 +464,18 @@ export default function Home(): React.ReactElement {
               </svg>
             </div>
           </div>
-          <h1 className="text-5xl font-semibold mb-3 text-white">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold mb-2 sm:mb-3 text-white px-4">
             Resume Matching AI
           </h1>
-          <p className="text-slate-400 text-lg font-light">
+          <p className="text-slate-400 text-sm sm:text-base md:text-lg font-light px-4">
             Intelligent candidate screening powered by AI
           </p>
         </div>
 
-        {/* Upload Section */}
-        <div className="glass-card rounded-2xl p-8 mb-8 scale-in">
-          <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+        <div className="glass-card rounded-2xl p-4 sm:p-6 md:p-8 mb-6 sm:mb-8 scale-in">
+          <h2 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-6 flex items-center gap-2">
             <svg
-              className="w-5 h-5 text-indigo-400"
+              className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -504,17 +490,16 @@ export default function Home(): React.ReactElement {
             Upload Documents
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            {/* Job Description Upload */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
             <div className="space-y-3">
               <button
                 type="button"
                 onClick={openJobPicker}
-                className="w-full btn-hover-effect bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-6 py-4 rounded-xl shadow-lg hover:shadow-indigo-500/30 transition-all duration-300 font-medium glow-on-hover hover:from-indigo-500 hover:to-indigo-600"
+                className="w-full btn-hover-effect bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl shadow-lg hover:shadow-indigo-500/30 transition-all duration-300 font-medium glow-on-hover hover:from-indigo-500 hover:to-indigo-600"
               >
                 <div className="flex items-center justify-center gap-2">
                   <svg
-                    className="w-5 h-5"
+                    className="w-4 h-4 sm:w-5 sm:h-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -526,13 +511,15 @@ export default function Home(): React.ReactElement {
                       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
-                  Upload Job Description
+                  <span className="text-sm sm:text-base">
+                    Upload Job Description
+                  </span>
                 </div>
               </button>
               {jobFileName ? (
-                <div className="glass-card rounded-lg p-3 flex items-center gap-2 slide-in-right">
+                <div className="glass-card rounded-lg p-2 sm:p-3 flex items-center gap-2 slide-in-right">
                   <svg
-                    className="w-5 h-5 text-emerald-400 flex-shrink-0"
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 flex-shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -544,27 +531,26 @@ export default function Home(): React.ReactElement {
                       d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <span className="text-sm text-slate-300 truncate">
+                  <span className="text-xs sm:text-sm text-slate-300 truncate">
                     {jobFileName}
                   </span>
                 </div>
               ) : (
-                <div className="text-sm text-slate-500 text-center">
+                <div className="text-xs sm:text-sm text-slate-500 text-center">
                   No file selected
                 </div>
               )}
             </div>
 
-            {/* Resume Upload */}
             <div className="space-y-3">
               <button
                 type="button"
                 onClick={openResumePicker}
-                className="w-full btn-hover-effect bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-4 rounded-xl shadow-lg hover:shadow-purple-500/30 transition-all duration-300 font-medium glow-on-hover hover:from-purple-500 hover:to-purple-600"
+                className="w-full btn-hover-effect bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl shadow-lg hover:shadow-purple-500/30 transition-all duration-300 font-medium glow-on-hover hover:from-purple-500 hover:to-purple-600"
               >
                 <div className="flex items-center justify-center gap-2">
                   <svg
-                    className="w-5 h-5"
+                    className="w-4 h-4 sm:w-5 sm:h-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -576,13 +562,13 @@ export default function Home(): React.ReactElement {
                       d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                     />
                   </svg>
-                  Upload Resume
+                  <span className="text-sm sm:text-base">Upload Resume</span>
                 </div>
               </button>
               {resumeFileName ? (
-                <div className="glass-card rounded-lg p-3 flex items-center gap-2 slide-in-right">
+                <div className="glass-card rounded-lg p-2 sm:p-3 flex items-center gap-2 slide-in-right">
                   <svg
-                    className="w-5 h-5 text-emerald-400 flex-shrink-0"
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 flex-shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -594,12 +580,12 @@ export default function Home(): React.ReactElement {
                       d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <span className="text-sm text-slate-300 truncate">
+                  <span className="text-xs sm:text-sm text-slate-300 truncate">
                     {resumeFileName}
                   </span>
                 </div>
               ) : (
-                <div className="text-sm text-slate-500 text-center">
+                <div className="text-xs sm:text-sm text-slate-500 text-center">
                   No file selected
                 </div>
               )}
@@ -621,13 +607,12 @@ export default function Home(): React.ReactElement {
             onChange={onResumeFileChange}
           />
 
-          {/* Error Messages */}
           {(jobError || resumeError) && (
-            <div className="space-y-2 mb-6 fade-in">
+            <div className="space-y-2 mb-4 sm:mb-6 fade-in">
               {jobError && (
-                <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm p-3 rounded-lg flex items-center gap-2">
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs sm:text-sm p-3 rounded-lg flex items-center gap-2">
                   <svg
-                    className="w-5 h-5 flex-shrink-0"
+                    className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -639,13 +624,13 @@ export default function Home(): React.ReactElement {
                       d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  {jobError}
+                  <span className="break-words">{jobError}</span>
                 </div>
               )}
               {resumeError && (
-                <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm p-3 rounded-lg flex items-center gap-2">
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs sm:text-sm p-3 rounded-lg flex items-center gap-2">
                   <svg
-                    className="w-5 h-5 flex-shrink-0"
+                    className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -657,18 +642,17 @@ export default function Home(): React.ReactElement {
                       d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  {resumeError}
+                  <span className="break-words">{resumeError}</span>
                 </div>
               )}
             </div>
           )}
 
-          {/* Job Description Preview */}
           {jobText && (
-            <div className="mb-6 fade-in">
-              <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <div className="mb-4 sm:mb-6 fade-in">
+              <h3 className="text-xs font-medium text-indigo-300 uppercase tracking-wider mb-2 sm:mb-3 flex items-center gap-2">
                 <svg
-                  className="w-4 h-4"
+                  className="w-3 h-3 sm:w-4 sm:h-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -688,24 +672,23 @@ export default function Home(): React.ReactElement {
                 </svg>
                 Job Description Preview
               </h3>
-              <div className="glass-card rounded-xl p-4 text-slate-300 whitespace-pre-wrap max-h-64 overflow-auto text-sm leading-relaxed">
+              <div className="glass-card rounded-xl p-3 sm:p-4 text-slate-300 whitespace-pre-wrap max-h-48 sm:max-h-64 overflow-auto text-xs sm:text-sm leading-relaxed">
                 {jobText}
               </div>
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <button
               type="button"
               onClick={checkMatch}
               disabled={isChecking}
-              className="flex-1 btn-hover-effect bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-4 rounded-xl shadow-lg hover:shadow-emerald-500/30 transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed glow-on-hover hover:from-emerald-400 hover:to-teal-500"
+              className="flex-1 btn-hover-effect bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl shadow-lg hover:shadow-emerald-500/30 transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed glow-on-hover hover:from-emerald-400 hover:to-teal-500 text-sm sm:text-base"
             >
               {isChecking ? (
-                <div className="flex items-center justify-center gap-3">
+                <div className="flex items-center justify-center gap-2 sm:gap-3">
                   <svg
-                    className="animate-spin h-5 w-5 text-white"
+                    className="animate-spin h-4 w-4 sm:h-5 sm:w-5 text-white"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -729,7 +712,7 @@ export default function Home(): React.ReactElement {
               ) : (
                 <div className="flex items-center justify-center gap-2">
                   <svg
-                    className="w-5 h-5"
+                    className="w-4 h-4 sm:w-5 sm:h-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -749,33 +732,34 @@ export default function Home(): React.ReactElement {
             <button
               type="button"
               onClick={onReset}
-              className="btn-hover-effect glass-card text-white px-6 py-4 rounded-xl hover:bg-slate-700/30 transition-all duration-300 font-medium"
+              className="sm:w-auto btn-hover-effect glass-card text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl hover:bg-slate-700/30 transition-all duration-300 font-medium text-sm sm:text-base"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
+              <div className="flex items-center justify-center gap-2">
+                <svg
+                  className="w-4 h-4 sm:w-5 sm:h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                <span className="sm:inline">Reset</span>
+              </div>
             </button>
           </div>
         </div>
 
-        {/* Match Results */}
         {matchResult && <MatchResult data={matchResult} />}
 
-        {/* Error Message */}
         {matchError && (
-          <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-xl mt-4 fade-in flex items-center gap-3">
+          <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 sm:p-4 rounded-xl mt-4 fade-in flex items-start gap-2 sm:gap-3">
             <svg
-              className="w-6 h-6 flex-shrink-0"
+              className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 mt-0.5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -787,9 +771,13 @@ export default function Home(): React.ReactElement {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <div>
-              <div className="font-semibold">Failed to check match</div>
-              <div className="text-sm text-red-300/80">{matchError}</div>
+            <div className="min-w-0">
+              <div className="font-semibold text-sm sm:text-base">
+                Failed to check match
+              </div>
+              <div className="text-xs sm:text-sm text-red-300/80 break-words mt-1">
+                {matchError}
+              </div>
             </div>
           </div>
         )}
