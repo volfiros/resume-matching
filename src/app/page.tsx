@@ -5,36 +5,252 @@ import { ScreeningResult } from "@/lib/types";
 
 type MatchResponse = ScreeningResult;
 
+// Helper function to convert numerical values to qualitative labels
+function getQualitativeScore(value: number | undefined): {
+  label: string;
+  color: string;
+  bgColor: string;
+} {
+  if (value === undefined)
+    return {
+      label: "Unknown",
+      color: "text-slate-400",
+      bgColor: "bg-slate-500/10",
+    };
+
+  if (value >= 0.8) {
+    return {
+      label: "Excellent",
+      color: "text-emerald-400",
+      bgColor: "bg-emerald-500/10",
+    };
+  } else if (value >= 0.6) {
+    return { label: "Good", color: "text-blue-400", bgColor: "bg-blue-500/10" };
+  } else if (value >= 0.4) {
+    return {
+      label: "Moderate",
+      color: "text-amber-400",
+      bgColor: "bg-amber-500/10",
+    };
+  } else if (value >= 0.2) {
+    return {
+      label: "Low",
+      color: "text-orange-400",
+      bgColor: "bg-orange-500/10",
+    };
+  } else {
+    return { label: "Poor", color: "text-red-400", bgColor: "bg-red-500/10" };
+  }
+}
+
+function getRecommendationStyle(recommendation: string): {
+  icon: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+} {
+  const lower = recommendation.toLowerCase();
+  if (lower.includes("proceed") || lower.includes("interview")) {
+    return {
+      icon: "✓",
+      color: "text-emerald-400",
+      bgColor: "bg-emerald-500/10",
+      borderColor: "border-emerald-500/30",
+    };
+  } else if (lower.includes("manual") || lower.includes("review")) {
+    return {
+      icon: "⚠",
+      color: "text-amber-400",
+      bgColor: "bg-amber-500/10",
+      borderColor: "border-amber-500/30",
+    };
+  } else {
+    return {
+      icon: "✗",
+      color: "text-red-400",
+      bgColor: "bg-red-500/10",
+      borderColor: "border-red-500/30",
+    };
+  }
+}
+
 function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
+  const matchScore = getQualitativeScore(data.match_score);
+  const confidence = getQualitativeScore(data.confidence);
+  const recommendation = getRecommendationStyle(data.recommendation);
+
   return (
-    <div className="bg-white/5 p-4 rounded text-white">
-      <h3 className="text-lg font-semibold mb-2">Match Result</h3>
-      <div className="grid grid-cols-1 gap-2 text-sm">
-        <div>
-          <strong>Match score:</strong>{" "}
-          <span className="font-medium">{data.match_score?.toFixed(2)}</span>
+    <div className="glass-card rounded-2xl p-8 fade-in">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 border border-blue-500/20 flex items-center justify-center">
+          <svg
+            className="w-6 h-6 text-blue-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
         </div>
-        <div>
-          <strong>Recommendation:</strong>{" "}
-          <span className="font-medium">{data.recommendation}</span>
+        <h3 className="text-2xl font-semibold gradient-text">Match Results</h3>
+      </div>
+
+      {/* Main Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {/* Match Score Card */}
+        <div className="glass-card rounded-xl p-6 scale-in card-hover">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+              Match Score
+            </span>
+            <div className={`w-2 h-2 rounded-full ${matchScore.bgColor}`}></div>
+          </div>
+          <div className={`text-3xl font-semibold ${matchScore.color} mb-2`}>
+            {matchScore.label}
+          </div>
+          <div className="w-full bg-slate-800/50 rounded-full h-1.5 overflow-hidden">
+            <div
+              className={`h-full ${matchScore.bgColor} progress-animate`}
+              style={{
+                width: `${(data.match_score ?? 0) * 100}%`,
+                backgroundColor: matchScore.color.replace("text-", "rgb("),
+              }}
+            ></div>
+          </div>
+          <div className="text-xs text-slate-500 mt-2">
+            {data.match_score?.toFixed(2) ?? "N/A"}/1.00
+          </div>
         </div>
-        <div>
-          <strong>Requires human:</strong>{" "}
-          <span className="font-medium">
-            {data.requires_human ? "Yes" : "No"}
-          </span>
-        </div>
-        <div>
-          <strong>Confidence:</strong>{" "}
-          <span className="font-medium">{data.confidence?.toFixed(2)}</span>
-        </div>
-        <div>
-          <strong>Reasoning summary:</strong>
-          <div className="mt-2 whitespace-pre-wrap text-sm text-white/90">
-            {data.reasoning_summary}
+
+        {/* Confidence Card */}
+        <div
+          className="glass-card rounded-xl p-6 scale-in card-hover"
+          style={{ animationDelay: "0.1s" }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+              Confidence
+            </span>
+            <div className={`w-2 h-2 rounded-full ${confidence.bgColor}`}></div>
+          </div>
+          <div className={`text-3xl font-semibold ${confidence.color} mb-2`}>
+            {confidence.label}
+          </div>
+          <div className="w-full bg-slate-800/50 rounded-full h-1.5 overflow-hidden">
+            <div
+              className={`h-full ${confidence.bgColor} progress-animate`}
+              style={{
+                width: `${(data.confidence ?? 0) * 100}%`,
+                animationDelay: "0.1s",
+                backgroundColor: confidence.color.replace("text-", "rgb("),
+              }}
+            ></div>
+          </div>
+          <div className="text-xs text-slate-500 mt-2">
+            {data.confidence?.toFixed(2) ?? "N/A"}/1.00
           </div>
         </div>
       </div>
+
+      {/* Recommendation Banner */}
+      <div
+        className={`${recommendation.bgColor} border ${recommendation.borderColor} rounded-xl p-6 mb-6 slide-in-right`}
+      >
+        <div className="flex items-start gap-4">
+          <div className={`text-2xl ${recommendation.color}`}>
+            {recommendation.icon}
+          </div>
+          <div className="flex-1">
+            <h4 className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-2">
+              Recommendation
+            </h4>
+            <p className={`text-lg font-semibold ${recommendation.color} mb-2`}>
+              {data.recommendation}
+            </p>
+            {data.requires_human && (
+              <div className="flex items-center gap-2 mt-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-400 pulse-subtle"></div>
+                <span className="text-sm text-amber-400 font-medium">
+                  Human review required
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Reasoning Summary */}
+      <div
+        className="glass-card rounded-xl p-6 fade-in"
+        style={{ animationDelay: "0.2s" }}
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <svg
+            className="w-5 h-5 text-blue-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          <h4 className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+            Detailed Analysis
+          </h4>
+        </div>
+        <div className="text-slate-300 leading-relaxed whitespace-pre-wrap text-sm">
+          {data.reasoning_summary}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Static particles data - deterministic and consistent
+const staticParticlesData = [
+  { id: 0, width: 5, height: 4, left: 7, duration: 30, delay: 0 },
+  { id: 1, width: 4, height: 3, left: 20, duration: 32, delay: 1 },
+  { id: 2, width: 3, height: 6, left: 33, duration: 19, delay: 2 },
+  { id: 3, width: 2, height: 3, left: 46, duration: 20, delay: 3 },
+  { id: 4, width: 2, height: 6, left: 59, duration: 15, delay: 4 },
+  { id: 5, width: 2, height: 2, left: 72, duration: 31, delay: 0 },
+  { id: 6, width: 5, height: 7, left: 85, duration: 26, delay: 1 },
+  { id: 7, width: 5, height: 3, left: 98, duration: 28, delay: 2 },
+  { id: 8, width: 3, height: 3, left: 11, duration: 19, delay: 3 },
+  { id: 9, width: 4, height: 5, left: 24, duration: 24, delay: 4 },
+  { id: 10, width: 6, height: 6, left: 37, duration: 24, delay: 0 },
+  { id: 11, width: 3, height: 7, left: 50, duration: 27, delay: 1 },
+  { id: 12, width: 5, height: 5, left: 63, duration: 17, delay: 2 },
+  { id: 13, width: 4, height: 4, left: 76, duration: 34, delay: 3 },
+  { id: 14, width: 6, height: 7, left: 89, duration: 22, delay: 4 },
+];
+
+// Floating particles component
+function FloatingParticles() {
+  return (
+    <div className="particles">
+      {staticParticlesData.map((particle) => (
+        <div
+          key={particle.id}
+          className="particle"
+          style={{
+            width: `${particle.width}px`,
+            height: `${particle.height}px`,
+            left: `${particle.left}%`,
+            animationDuration: `${particle.duration}s`,
+            animationDelay: `${particle.delay}s`,
+          }}
+        />
+      ))}
     </div>
   );
 }
@@ -182,112 +398,345 @@ export default function Home(): React.ReactElement {
   }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-3xl text-white">
-        <h1 className="text-2xl font-semibold mb-6">Upload job & resume</h1>
+    <div className="min-h-screen animated-bg flex items-center justify-center px-4 py-12">
+      {/* Animated Background Elements */}
+      <FloatingParticles />
+      <div className="grid-pattern"></div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={openJobPicker}
-              className="cursor-pointer bg-white text-black px-5 py-2 rounded-md shadow hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-white/30"
-            >
-              Upload Job Description (.txt)
-            </button>
-
-            <button
-              type="button"
-              onClick={openResumePicker}
-              className="cursor-pointer bg-white text-black px-5 py-2 rounded-md shadow hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-white/30"
-            >
-              Upload Resume (.pdf/.doc/.docx)
-            </button>
+      <div className="w-full max-w-5xl relative z-10">
+        {/* Header */}
+        <div className="text-center mb-12 fade-in">
+          <div className="inline-block mb-4">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 border border-blue-500/20 flex items-center justify-center float">
+              <svg
+                className="w-8 h-8 text-blue-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            </div>
           </div>
+          <h1 className="text-5xl font-semibold mb-3 text-white">
+            Resume Matching AI
+          </h1>
+          <p className="text-slate-400 text-lg font-light">
+            Intelligent candidate screening powered by AI
+          </p>
+        </div>
 
-          <div className="text-sm text-white/80 mt-3 sm:mt-0">
-            <div>
-              <strong>Job:</strong>{" "}
+        {/* Upload Section */}
+        <div className="glass-card rounded-2xl p-8 mb-8 scale-in">
+          <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+            <svg
+              className="w-5 h-5 text-blue-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
+            </svg>
+            Upload Documents
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Job Description Upload */}
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={openJobPicker}
+                className="w-full btn-hover-effect bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-6 py-4 rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all duration-300 font-medium glow-on-hover"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  Upload Job Description
+                </div>
+              </button>
               {jobFileName ? (
-                <span className="font-medium text-white">{jobFileName}</span>
+                <div className="glass-card rounded-lg p-3 flex items-center gap-2 slide-in-right">
+                  <svg
+                    className="w-5 h-5 text-emerald-400 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span className="text-sm text-slate-300 truncate">
+                    {jobFileName}
+                  </span>
+                </div>
               ) : (
-                <span className="text-white/60">No file chosen</span>
+                <div className="text-sm text-slate-500 text-center">
+                  No file selected
+                </div>
               )}
             </div>
-            <div className="mt-1">
-              <strong>Resume:</strong>{" "}
+
+            {/* Resume Upload */}
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={openResumePicker}
+                className="w-full btn-hover-effect bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-6 py-4 rounded-xl shadow-lg hover:shadow-indigo-500/25 transition-all duration-300 font-medium glow-on-hover"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                  Upload Resume
+                </div>
+              </button>
               {resumeFileName ? (
-                <span className="font-medium text-white">{resumeFileName}</span>
+                <div className="glass-card rounded-lg p-3 flex items-center gap-2 slide-in-right">
+                  <svg
+                    className="w-5 h-5 text-emerald-400 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span className="text-sm text-slate-300 truncate">
+                    {resumeFileName}
+                  </span>
+                </div>
               ) : (
-                <span className="text-white/60">No file chosen</span>
+                <div className="text-sm text-slate-500 text-center">
+                  No file selected
+                </div>
               )}
             </div>
           </div>
-        </div>
 
-        <input
-          ref={jobInputRef}
-          type="file"
-          accept=".txt,text/plain"
-          className="hidden"
-          onChange={onJobFileChange}
-        />
-        <input
-          ref={resumeInputRef}
-          type="file"
-          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          className="hidden"
-          onChange={onResumeFileChange}
-        />
+          <input
+            ref={jobInputRef}
+            type="file"
+            accept=".txt,text/plain"
+            className="hidden"
+            onChange={onJobFileChange}
+          />
+          <input
+            ref={resumeInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="hidden"
+            onChange={onResumeFileChange}
+          />
 
-        <div className="space-y-2 mb-6">
-          {jobError && (
-            <div className="text-red-400 text-sm bg-white/5 p-2 rounded">
-              {jobError}
+          {/* Error Messages */}
+          {(jobError || resumeError) && (
+            <div className="space-y-2 mb-6 fade-in">
+              {jobError && (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm p-3 rounded-lg flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  {jobError}
+                </div>
+              )}
+              {resumeError && (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm p-3 rounded-lg flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  {resumeError}
+                </div>
+              )}
             </div>
           )}
-          {resumeError && (
-            <div className="text-red-400 text-sm bg-white/5 p-2 rounded">
-              {resumeError}
+
+          {/* Job Description Preview */}
+          {jobText && (
+            <div className="mb-6 fade-in">
+              <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+                Job Description Preview
+              </h3>
+              <div className="glass-card rounded-xl p-4 text-slate-300 whitespace-pre-wrap max-h-64 overflow-auto text-sm leading-relaxed">
+                {jobText}
+              </div>
             </div>
           )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={checkMatch}
+              disabled={isChecking}
+              className="flex-1 btn-hover-effect bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-4 rounded-xl shadow-lg hover:shadow-emerald-500/25 transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed glow-on-hover"
+            >
+              {isChecking ? (
+                <div className="flex items-center justify-center gap-3">
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Analyzing...
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                  Check Match
+                </div>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={onReset}
+              className="btn-hover-effect glass-card text-white px-6 py-4 rounded-xl hover:bg-slate-700/30 transition-all duration-300 font-medium"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        <div className="mb-6">
-          <h2 className="text-lg font-medium mb-2">Job description preview</h2>
-          {jobText ? (
-            <div className="bg-white/5 p-4 rounded text-white/90 whitespace-pre-wrap max-h-72 overflow-auto">
-              {jobText}
-            </div>
-          ) : (
-            <div className="text-white/60">No job text loaded.</div>
-          )}
-        </div>
-
-        <div className="flex gap-3 mb-6">
-          <button
-            type="button"
-            onClick={checkMatch}
-            disabled={isChecking}
-            className="cursor-pointer bg-white text-black px-4 py-2 rounded-md shadow hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:opacity-60"
-          >
-            {isChecking ? "Checking..." : "Check Match"}
-          </button>
-
-          <button
-            type="button"
-            onClick={onReset}
-            className="cursor-pointer bg-white/5 border border-white/10 text-white px-4 py-2 rounded-md hover:bg-white/6 focus:outline-none"
-          >
-            Reset
-          </button>
-        </div>
-
+        {/* Match Results */}
         {matchResult && <MatchResult data={matchResult} />}
 
+        {/* Error Message */}
         {matchError && (
-          <div className="text-red-400 text-sm bg-white/5 p-2 rounded mt-3">
-            Failed to check match.
+          <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-xl mt-4 fade-in flex items-center gap-3">
+            <svg
+              className="w-6 h-6 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div>
+              <div className="font-semibold">Failed to check match</div>
+              <div className="text-sm text-red-300/80">{matchError}</div>
+            </div>
           </div>
         )}
       </div>
