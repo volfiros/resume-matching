@@ -79,12 +79,18 @@ function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
   const confidence = getQualitativeScore(data.confidence);
   const recommendation = getRecommendationStyle(data.recommendation);
 
+  // Check if this is a manual review case
+  const isManualReview =
+    recommendation.color === "text-amber-400" ||
+    data.recommendation.toLowerCase().includes("manual") ||
+    data.recommendation.toLowerCase().includes("review");
+
   return (
-    <div className="glass-card rounded-2xl p-8 fade-in">
+    <div className="glass-card rounded-2xl p-8 slide-up">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 border border-blue-500/20 flex items-center justify-center">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/30 to-purple-500/30 border border-indigo-400/30 flex items-center justify-center shimmer">
           <svg
-            className="w-6 h-6 text-blue-400"
+            className="w-6 h-6 text-indigo-300"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -97,65 +103,71 @@ function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
             />
           </svg>
         </div>
-        <h3 className="text-2xl font-semibold gradient-text">Match Results</h3>
+        <h3 className="text-2xl font-semibold text-white">Match Results</h3>
       </div>
 
-      {/* Main Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {/* Match Score Card */}
-        <div className="glass-card rounded-xl p-6 scale-in card-hover">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">
-              Match Score
-            </span>
-            <div className={`w-2 h-2 rounded-full ${matchScore.bgColor}`}></div>
+      {/* Main Stats Grid - Only show if NOT manual review */}
+      {!isManualReview && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {/* Match Score Card */}
+          <div className="glass-card rounded-xl p-6 scale-in card-hover">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                Match Score
+              </span>
+              <div
+                className={`w-2 h-2 rounded-full ${matchScore.bgColor}`}
+              ></div>
+            </div>
+            <div className={`text-3xl font-semibold ${matchScore.color} mb-2`}>
+              {matchScore.label}
+            </div>
+            <div className="w-full bg-slate-800/50 rounded-full h-1.5 overflow-hidden">
+              <div
+                className={`h-full ${matchScore.bgColor} progress-animate`}
+                style={{
+                  width: `${(data.match_score ?? 0) * 100}%`,
+                  backgroundColor: matchScore.color.replace("text-", "rgb("),
+                }}
+              ></div>
+            </div>
+            <div className="text-xs text-slate-500 mt-2">
+              {data.match_score?.toFixed(2) ?? "N/A"}/1.00
+            </div>
           </div>
-          <div className={`text-3xl font-semibold ${matchScore.color} mb-2`}>
-            {matchScore.label}
-          </div>
-          <div className="w-full bg-slate-800/50 rounded-full h-1.5 overflow-hidden">
-            <div
-              className={`h-full ${matchScore.bgColor} progress-animate`}
-              style={{
-                width: `${(data.match_score ?? 0) * 100}%`,
-                backgroundColor: matchScore.color.replace("text-", "rgb("),
-              }}
-            ></div>
-          </div>
-          <div className="text-xs text-slate-500 mt-2">
-            {data.match_score?.toFixed(2) ?? "N/A"}/1.00
-          </div>
-        </div>
 
-        {/* Confidence Card */}
-        <div
-          className="glass-card rounded-xl p-6 scale-in card-hover"
-          style={{ animationDelay: "0.1s" }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">
-              Confidence
-            </span>
-            <div className={`w-2 h-2 rounded-full ${confidence.bgColor}`}></div>
-          </div>
-          <div className={`text-3xl font-semibold ${confidence.color} mb-2`}>
-            {confidence.label}
-          </div>
-          <div className="w-full bg-slate-800/50 rounded-full h-1.5 overflow-hidden">
-            <div
-              className={`h-full ${confidence.bgColor} progress-animate`}
-              style={{
-                width: `${(data.confidence ?? 0) * 100}%`,
-                animationDelay: "0.1s",
-                backgroundColor: confidence.color.replace("text-", "rgb("),
-              }}
-            ></div>
-          </div>
-          <div className="text-xs text-slate-500 mt-2">
-            {data.confidence?.toFixed(2) ?? "N/A"}/1.00
+          {/* Confidence Card */}
+          <div
+            className="glass-card rounded-xl p-6 scale-in card-hover"
+            style={{ animationDelay: "0.1s" }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                Confidence
+              </span>
+              <div
+                className={`w-2 h-2 rounded-full ${confidence.bgColor}`}
+              ></div>
+            </div>
+            <div className={`text-3xl font-semibold ${confidence.color} mb-2`}>
+              {confidence.label}
+            </div>
+            <div className="w-full bg-slate-800/50 rounded-full h-1.5 overflow-hidden">
+              <div
+                className={`h-full ${confidence.bgColor} progress-animate`}
+                style={{
+                  width: `${(data.confidence ?? 0) * 100}%`,
+                  animationDelay: "0.1s",
+                  backgroundColor: confidence.color.replace("text-", "rgb("),
+                }}
+              ></div>
+            </div>
+            <div className="text-xs text-slate-500 mt-2">
+              {data.confidence?.toFixed(2) ?? "N/A"}/1.00
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Recommendation Banner */}
       <div
@@ -191,7 +203,7 @@ function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
       >
         <div className="flex items-center gap-2 mb-4">
           <svg
-            className="w-5 h-5 text-blue-400"
+            className="w-5 h-5 text-indigo-400"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -203,7 +215,7 @@ function MatchResult({ data }: { data: MatchResponse }): React.ReactElement {
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <h4 className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+          <h4 className="text-xs text-indigo-300 font-medium uppercase tracking-wider">
             Detailed Analysis
           </h4>
         </div>
@@ -249,6 +261,43 @@ function FloatingParticles() {
             animationDuration: `${particle.duration}s`,
             animationDelay: `${particle.delay}s`,
           }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Bubble animation component
+function BubbleAnimation() {
+  const bubbles = [
+    { id: 1, size: 80, left: 10, duration: 8, delay: 0, drift: "50px" },
+    { id: 2, size: 120, left: 25, duration: 10, delay: 2, drift: "-70px" },
+    { id: 3, size: 60, left: 40, duration: 7, delay: 4, drift: "30px" },
+    { id: 4, size: 100, left: 55, duration: 9, delay: 1, drift: "-50px" },
+    { id: 5, size: 70, left: 70, duration: 8, delay: 3, drift: "60px" },
+    { id: 6, size: 90, left: 85, duration: 11, delay: 5, drift: "-40px" },
+    { id: 7, size: 110, left: 15, duration: 9, delay: 6, drift: "45px" },
+    { id: 8, size: 75, left: 60, duration: 8, delay: 2, drift: "-35px" },
+    { id: 9, size: 95, left: 80, duration: 10, delay: 4, drift: "55px" },
+    { id: 10, size: 65, left: 30, duration: 7, delay: 1, drift: "-45px" },
+  ];
+
+  return (
+    <div className="bubbles">
+      {bubbles.map((bubble) => (
+        <div
+          key={bubble.id}
+          className="bubble"
+          style={
+            {
+              width: `${bubble.size}px`,
+              height: `${bubble.size}px`,
+              left: `${bubble.left}%`,
+              animationDuration: `${bubble.duration}s`,
+              animationDelay: `${bubble.delay}s`,
+              "--bubble-drift": bubble.drift,
+            } as React.CSSProperties
+          }
         />
       ))}
     </div>
@@ -400,16 +449,21 @@ export default function Home(): React.ReactElement {
   return (
     <div className="min-h-screen animated-bg flex items-center justify-center px-4 py-12">
       {/* Animated Background Elements */}
+      <BubbleAnimation />
       <FloatingParticles />
-      <div className="grid-pattern"></div>
+
+      {/* Animated Orbs */}
+      <div className="orb orb-1"></div>
+      <div className="orb orb-2"></div>
+      <div className="orb orb-3"></div>
 
       <div className="w-full max-w-5xl relative z-10">
         {/* Header */}
         <div className="text-center mb-12 fade-in">
           <div className="inline-block mb-4">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 border border-blue-500/20 flex items-center justify-center float">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-indigo-500/30 to-purple-500/30 border border-indigo-400/30 flex items-center justify-center float">
               <svg
-                className="w-8 h-8 text-blue-400"
+                className="w-8 h-8 text-indigo-300"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -435,7 +489,7 @@ export default function Home(): React.ReactElement {
         <div className="glass-card rounded-2xl p-8 mb-8 scale-in">
           <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
             <svg
-              className="w-5 h-5 text-blue-400"
+              className="w-5 h-5 text-indigo-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -456,7 +510,7 @@ export default function Home(): React.ReactElement {
               <button
                 type="button"
                 onClick={openJobPicker}
-                className="w-full btn-hover-effect bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-6 py-4 rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all duration-300 font-medium glow-on-hover"
+                className="w-full btn-hover-effect bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-6 py-4 rounded-xl shadow-lg hover:shadow-indigo-500/30 transition-all duration-300 font-medium glow-on-hover hover:from-indigo-500 hover:to-indigo-600"
               >
                 <div className="flex items-center justify-center gap-2">
                   <svg
@@ -506,7 +560,7 @@ export default function Home(): React.ReactElement {
               <button
                 type="button"
                 onClick={openResumePicker}
-                className="w-full btn-hover-effect bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-6 py-4 rounded-xl shadow-lg hover:shadow-indigo-500/25 transition-all duration-300 font-medium glow-on-hover"
+                className="w-full btn-hover-effect bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-4 rounded-xl shadow-lg hover:shadow-purple-500/30 transition-all duration-300 font-medium glow-on-hover hover:from-purple-500 hover:to-purple-600"
               >
                 <div className="flex items-center justify-center gap-2">
                   <svg
@@ -646,7 +700,7 @@ export default function Home(): React.ReactElement {
               type="button"
               onClick={checkMatch}
               disabled={isChecking}
-              className="flex-1 btn-hover-effect bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-4 rounded-xl shadow-lg hover:shadow-emerald-500/25 transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed glow-on-hover"
+              className="flex-1 btn-hover-effect bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-4 rounded-xl shadow-lg hover:shadow-emerald-500/30 transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed glow-on-hover hover:from-emerald-400 hover:to-teal-500"
             >
               {isChecking ? (
                 <div className="flex items-center justify-center gap-3">
