@@ -1,12 +1,10 @@
-# Agentic Resume Screening & Shortlisting Assistant
+# Resume Matching System
 
-A smart AI-powered system that automates resume screening by matching candidates with job requirements using a multi-agent architecture.
-
-🔗 **Live Demo**: [https://assignment-rithvik.vercel.app/](https://assignment-rithvik.vercel.app/)
+An intelligent AI-powered resume screening system that automates candidate evaluation by matching resumes with job requirements using a multi-agent architecture.
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Architecture](#architecture)
@@ -15,14 +13,13 @@ A smart AI-powered system that automates resume screening by matching candidates
 - [Setup & Installation](#setup--installation)
 - [Usage](#usage)
 - [API Reference](#api-reference)
-- [Testing](#testing)
 - [Trade-offs & Assumptions](#trade-offs--assumptions)
 - [Error Handling](#error-handling)
 - [Future Improvements](#future-improvements)
 
 ---
 
-## 🎯 Overview
+## Overview
 
 This system receives a resume (PDF/DOCX) and job description (TXT) as input, then processes them through a pipeline of specialized AI agents to produce a structured hiring recommendation. Each agent handles a specific task, passing information to the next agent in the pipeline.
 
@@ -36,7 +33,7 @@ Rather than one monolithic function, the system uses **5 specialized agents**:
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────┐
@@ -100,7 +97,7 @@ interface AgentState {
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Core Framework
 - **Next.js 16.1.2** - React framework for the web interface
@@ -122,7 +119,7 @@ interface AgentState {
 
 ---
 
-## 🤖 Agent Design
+## Agent Design
 
 ### 1. Document Parser Agent
 **Responsibility**: Convert resume files to text
@@ -212,7 +209,7 @@ Output: ScreeningResult
 
 ---
 
-## 🚀 Setup & Installation
+## Setup & Installation
 
 ### Prerequisites
 - Node.js 20+ 
@@ -223,7 +220,7 @@ Output: ScreeningResult
 1. **Clone the repository**
 ```bash
 git clone <repository-url>
-cd hiring-agent
+cd resume-matching
 ```
 
 2. **Install dependencies**
@@ -249,7 +246,7 @@ Navigate to `http://localhost:3000` in your browser
 
 ---
 
-## 💻 Usage
+## Usage
 
 ### Web Interface
 
@@ -297,137 +294,36 @@ FormData {
 
 ---
 
-## 🧪 Testing
-
-### Manual Testing Strategy
-
-The current implementation can be tested manually using the provided sample files:
-
-1. **Test with Sample Resume**
-   - Use: `resume_01_priya_sharma.pdf` (provided in documents)
-   - Expected: Should extract Python, Django, FastAPI skills
-   - Status: ✅ Works as expected
-
-2. **Test with Vague Job Description**
-   - Use: `jd_04_vague_ambiguous.txt` (provided in documents)
-   - Expected: Should detect vague requirements and flag for manual review
-   - Status: ✅ Implemented - System detects and flags vague job descriptions
-
-### Recommended Automated Testing Approach
-
-To make the system testable in the future:
-
-#### 1. Unit Tests for Each Agent
-
-```typescript
-// Example test structure
-describe('Skill Extractor Agent', () => {
-  it('should extract skills from resume text', async () => {
-    const mockState = {
-      resumeText: 'Python developer with 3 years of Django experience'
-    };
-    const result = await skillExtractorAgent(mockState);
-    expect(result.extractedSkills).toContain('Python');
-    expect(result.extractedSkills).toContain('Django');
-  });
-});
-```
-
-**Testing Tools**: Jest, @testing-library/react
-
-#### 2. Integration Tests for Pipeline
-
-```typescript
-describe('Screening Pipeline', () => {
-  it('should process valid resume and job description', async () => {
-    const resumeBuffer = fs.readFileSync('./test-fixtures/sample-resume.pdf');
-    const jobDescription = 'Backend engineer with Python...';
-    
-    const result = await runScreeningPipeline(
-      resumeBuffer, 
-      'sample-resume.pdf', 
-      jobDescription
-    );
-    
-    expect(result.match_score).toBeGreaterThan(0);
-    expect(result.recommendation).toBeDefined();
-  });
-});
-```
-
-#### 3. Mocking AI Responses
-
-Since Gemini API calls cost money and have rate limits, use mocking:
-
-```typescript
-// Mock Gemini responses for consistent testing
-jest.mock('@/lib/utils/gemini', () => ({
-  callGemini: jest.fn().mockResolvedValue(
-    JSON.stringify({
-      skills: ['Python', 'Django'],
-      experience: '3 years backend',
-      education: 'B.Tech Computer Science'
-    })
-  ),
-  parseAIResponse: jest.fn(JSON.parse)
-}));
-```
-
-#### 4. End-to-End Tests
-
-Use Playwright or Cypress to test the full user flow:
-
-```typescript
-test('complete screening workflow', async ({ page }) => {
-  await page.goto('http://localhost:3000');
-  await page.setInputFiles('input[type="file"]', 'test-resume.pdf');
-  await page.fill('textarea', 'Python developer needed...');
-  await page.click('button:has-text("Check Match")');
-  await expect(page.locator('.match-result')).toBeVisible();
-});
-```
-
-#### 5. Error Scenario Testing
-
-Test edge cases:
-- Empty resume files
-- Corrupted PDFs
-- Missing job descriptions
-- API failures
-- Rate limiting
-
----
-
-## ⚖️ Trade-offs & Assumptions
+## Trade-offs & Assumptions
 
 ### Trade-offs
 
 1. **AI Model Choice: Gemini 2.5 Flash**
-   - ✅ Fast response times (~2-3 seconds)
-   - ✅ Free tier available with generous limits
-   - ✅ Good JSON output quality
-   - ❌ Not as powerful as GPT-4 for complex reasoning
-   - ❌ Requires internet connection
+   - Fast response times (~2-3 seconds)
+   - Free tier available with generous limits
+   - Good JSON output quality
+   - Not as powerful as GPT-4 for complex reasoning
+   - Requires internet connection
 
 2. **Sequential vs Parallel Agent Execution**
    - Current: Sequential (one agent after another)
-   - ✅ Easier to debug and understand
-   - ✅ Clear data flow
-   - ❌ Slower than parallel execution
-   - **Future**: Could parallelize Job Analyzer and Skill Extractor
+   - Easier to debug and understand
+   - Clear data flow
+   - Slower than parallel execution
+   - Future: Could parallelize Job Analyzer and Skill Extractor
 
 3. **File Format Support**
    - Supports: PDF, DOCX, DOC
-   - ❌ No support for images (screenshot resumes)
-   - ❌ No OCR for scanned PDFs
-   - **Reason**: Balancing complexity vs common use cases
+   - No support for images (screenshot resumes)
+   - No OCR for scanned PDFs
+   - Reason: Balancing complexity vs common use cases
 
 4. **No Database/Persistence**
    - All processing is stateless
-   - ✅ Simpler deployment
-   - ✅ No data privacy concerns
-   - ❌ Can't track historical decisions
-   - ❌ No learning from past matches
+   - Simpler deployment
+   - No data privacy concerns
+   - Can't track historical decisions
+   - No learning from past matches
 
 ### Assumptions
 
@@ -449,7 +345,7 @@ Test edge cases:
 
 ---
 
-## 🛡️ Error Handling
+## Error Handling
 
 The system implements **graceful degradation** at every step:
 
@@ -492,11 +388,9 @@ Each agent catches its own errors and returns a fallback state, preventing the e
 
 ---
 
-## 🚀 Future Improvements
+## Future Improvements
 
-### If I Had More Time
-
-1. **LangGraph Integration** ⭐
+1. **LangGraph Integration**
    - Replace custom orchestrator with LangGraph
    - Enable conditional routing (skip agents based on confidence)
    - Add retry logic for failed agents
@@ -539,36 +433,6 @@ Each agent catches its own errors and returns a fallback state, preventing the e
 
 ---
 
-## 👤 Author
+## License
 
-Created by Rithvik for the Pitcrew hiring process.
-
-**Contact**: rithvik.padma@gmail.com  
-**GitHub**: https://github.com/volfiros/assignment-rithvik
-
----
-
-## 🙏 Acknowledgments
-
-- **Pitcrew Team** for the well-designed assignment
-- **Google** for Gemini API
-- **GitHub Copilot** for assistance with agent parameter design and code structure
-- **Next.js Team** for the excellent framework
-- **Open Source Community** for pdf2json, mammoth, and other libraries
-
----
-
-## 📚 Assignment Compliance Checklist
-
-- ✅ Multi-agent architecture with clear responsibilities
-- ✅ Agents pass structured data between each other
-- ✅ Decision points based on intermediate outputs
-- ✅ Handles uncertainty with human review flags
-- ✅ Detects and flags vague job descriptions for manual review
-- ✅ Clear reasoning and explainability
-- ✅ Smart use of AI tools (Gemini)
-- ✅ Error handling with graceful failures
-- ✅ Comprehensive README with architecture overview
-- ✅ Sample inputs and outputs demonstrated
-- ✅ Runs locally with clear setup instructions
-- ✅ Uses free AI tools (Gemini free tier)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
