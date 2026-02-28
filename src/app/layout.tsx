@@ -1,27 +1,32 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans, Syne } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 
-const inter = Inter({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-inter",
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-jakarta",
+});
+
+const syne = Syne({
+  subsets: ["latin"],
+  weight: ["700", "800"],
+  variable: "--font-syne",
 });
 
 export const metadata: Metadata = {
-  title: "Resume Matching AI",
-  description:
-    "Intelligent AI-powered resume screening system that automates candidate evaluation by matching resumes with job requirements",
+  title: "SIFT — AI Resume Screening",
+  description: "AI-powered resume screening. Match candidates to job descriptions instantly.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} antialiased`}>{children}</body>
+    <html lang="en" className="dark">
+      <body className={`${jakarta.variable} ${syne.variable} antialiased bg-[#0a0a0a] text-white`}>
+        {children}
+        <Toaster theme="dark" position="bottom-right" richColors />
+      </body>
     </html>
   );
 }

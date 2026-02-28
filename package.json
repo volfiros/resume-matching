@@ -9,14 +9,21 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@convex-dev/better-auth": "^0.10.13",
     "@google/generative-ai": "^0.24.1",
-    "dotenv": "^17.2.3",
-    "formidable": "^3.5.4",
+    "@langchain/core": "^1.1.29",
+    "@langchain/google-genai": "^2.1.22",
+    "@langchain/langgraph": "^1.2.0",
+    "better-auth": "^1.4.9",
+    "convex": "^1.32.0",
+    "framer-motion": "^12.34.3",
+    "lucide-react": "^0.575.0",
     "mammoth": "^1.11.0",
     "next": "^16.1.6",
     "pdf2json": "^4.0.2",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "sonner": "^2.0.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
