@@ -1,8 +1,8 @@
-# Resume Matching System
+# SIFT
 
-An intelligent AI-powered resume screening system that automates candidate evaluation by matching resumes with job requirements using a multi-agent architecture.
+An AI-powered resume screening platform that processes multiple resumes against a job description using a multi-agent LangGraph pipeline, returning structured match scores, confidence levels, and hiring recommendations.
 
-https://resume-matching-rithvik.vercel.app
+https://sift-matching.vercel.app
 
 ---
 
@@ -11,89 +11,91 @@ https://resume-matching-rithvik.vercel.app
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
-- [Agent Design](#agent-design)
+- [Agent Pipeline](#agent-pipeline)
+- [Scoring Model](#scoring-model)
 - [Setup & Installation](#setup--installation)
 - [Usage](#usage)
-- [API Reference](#api-reference)
-- [Trade-offs & Assumptions](#trade-offs--assumptions)
-- [Error Handling](#error-handling)
-- [Future Improvements](#future-improvements)
+- [Trade-offs & Design Decisions](#trade-offs--design-decisions)
 
 ---
 
 ## Overview
 
-This system receives a resume (PDF/DOCX) and job description (TXT) as input, then processes them through a pipeline of specialized AI agents to produce a structured hiring recommendation. Each agent handles a specific task, passing information to the next agent in the pipeline.
+SIFT lets hiring teams upload a job description and one or more resumes, then runs each resume through a LangGraph-powered multi-agent pipeline to produce a structured screening result per candidate. Results are ranked by match score and presented with reasoning, a view-resume button, and human-review flags for borderline cases.
 
-### What Makes It "Agentic"
-
-Rather than one monolithic function, the system uses **5 specialized agents**:
-- Each agent has a clear, single responsibility
-- Agents pass structured data between each other through a shared state
-- Decision-making happens at multiple points based on intermediate outputs
-- The system handles uncertainty by flagging cases for human review
+All AI calls use **Gemini 2.5 Flash at temperature 0** for deterministic, consistent output. The final match score and recommendation are computed with a deterministic weighted formula — not by the LLM — eliminating scoring variance across runs.
 
 ---
 
 ## Architecture
 
+### LangGraph Pipeline
+
 ```
-┌─────────────────┐
-│   User Input    │
-│ Resume + Job    │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────────────┐
-│              ORCHESTRATOR                           │
-│  (runScreeningPipeline)                             │
-└─────────────────────────────────────────────────────┘
-         │
-         ├──► 1. Document Parser Agent
-         │    ├─ Extracts text from PDF/DOCX
-         │    └─ State: { resumeText, jobDescription }
-         │
-         ├──► 2. Skill Extractor Agent
-         │    ├─ Analyzes resume using Gemini 2.5 Flash
-         │    └─ State: { extractedSkills, experience, education }
-         │
-         ├──► 3. Job Analyzer Agent
-         │    ├─ Extracts requirements from job description
-         │    └─ State: { jobRequirements }
-         │
-         ├──► 4. Matcher Agent
-         │    ├─ Compares candidate profile with requirements
-         │    └─ State: { matchDetails }
-         │
-         └──► 5. Decision Maker Agent
-              ├─ Makes final hiring recommendation
-              └─ Returns: ScreeningResult
+                     ┌──────────────────┐
+                     │    __start__     │
+                     └────────┬─────────┘
+                              │
+              ┌───────────────┴────────────────┐
+              ▼                                ▼
+   ┌─────────────────────┐        ┌─────────────────────┐
+   │   skillExtractor    │        │    jobAnalyzer      │
+   │ (runs in parallel)  │        │  (runs in parallel) │
+   └──────────┬──────────┘        └──────────┬──────────┘
+              └──────────────┬───────────────┘
+                             ▼
+                  ┌─────────────────────┐
+                  │  jobRequirements    │
+                  │    isVague?         │
+                  └──────────┬──────────┘
+                    yes ─────┤───── no
+                    ▼        │        ▼
+             decisionMaker   │     matcher
+             (skip matching) │        │
+                             └────────┘
+                                      ▼
+                              ┌──────────────┐
+                              │ decisionMaker│
+                              └──────────────┘
 ```
 
-### State Management
+**Key design choices:**
+- `skillExtractor` and `jobAnalyzer` run in parallel from `__start__`, cutting wall-clock time
+- If the job description is detected as vague, the pipeline short-circuits directly to `decisionMaker` and flags for human review
+- Each resume is processed as a fully independent graph invocation, all running concurrently via `Promise.all`
 
-The system uses a **stateful pipeline** where each agent enriches a shared `AgentState` object:
+### Shared State
 
 ```typescript
 interface AgentState {
-  resumeText?: string;
-  jobDescription?: string;
-  extractedSkills?: string[];
-  experience?: string;
-  education?: string;
-  jobRequirements?: {
+  resumeText: string;
+  jobDescription: string;
+  geminiApiKey: string;
+  candidateName: string;
+  extractedSkills: string[];
+  experience: string;
+  education: string;
+  jobRequirements: {
     requiredSkills: string[];
     preferredSkills: string[];
     experienceYears?: number;
     education?: string;
-    isVague?: boolean; // Flags unclear job descriptions
+    isVague?: boolean;
   };
-  matchDetails?: {
+  matchDetails: {
     skillMatches: string[];
     skillGaps: string[];
+    preferredMatches: string[];
     experienceMatch: boolean;
     educationMatch: boolean;
   };
+  result: {
+    matchScore: number;
+    confidence: number;
+    recommendation: string;
+    requiresHuman: boolean;
+    reasoning: string;
+  } | null;
 }
 ```
 
@@ -101,340 +103,194 @@ interface AgentState {
 
 ## Tech Stack
 
-### Core Framework
-- **Next.js 16.1.2** - React framework for the web interface
-- **React 19.2.3** - UI library
-- **TypeScript 5.x** - Type safety and better developer experience
-
-### AI & Processing
-- **Google Generative AI (Gemini 2.5 Flash)** - LLM for intelligent text analysis
-  - Model: `gemini-2.5-flash`
-  - Used for: skill extraction, job analysis, candidate matching, decision making
-- **pdf2json** - PDF text extraction
-- **mammoth** - DOCX text extraction
-
-### Styling & UI
-- **Tailwind CSS 4.x** - Utility-first CSS framework
-
-### File Handling
-- **formidable** - Parse multipart form data on the server
+| Layer | Technology |
+|---|---|
+| Framework | Next.js (App Router) |
+| Language | TypeScript |
+| AI Orchestration | LangGraph (`@langchain/langgraph`) |
+| LLM | Gemini 2.5 Flash (`@google/generative-ai`) |
+| Auth | BetterAuth + `@convex-dev/better-auth` |
+| Database | Convex |
+| Styling | Tailwind CSS |
+| Animations | Framer Motion |
+| Fonts | Plus Jakarta Sans (body), Syne (wordmark) |
+| Toasts | Sonner |
+| File Parsing | pdf2json (PDF), mammoth (DOCX) |
+| Icons | lucide-react |
 
 ---
 
-## Agent Design
+## Agent Pipeline
 
-### 1. Document Parser Agent
-**Responsibility**: Convert resume files to text
+### 1. Skill Extractor
+Analyzes the resume and extracts structured candidate data.
 
-```typescript
-Input:  Buffer (PDF/DOCX), filename
-Output: { resumeText, jobDescription }
+```
+Input:  resumeText
+Output: candidateName, extractedSkills[], experience, education
 ```
 
-**Logic**:
-- Detects file format from extension
-- Routes to appropriate parser (pdf2json or mammoth)
-- Validates extracted text length
-- Handles parsing failures gracefully
+Prompts Gemini to return JSON. Runs in parallel with jobAnalyzer.
 
-### 2. Skill Extractor Agent
-**Responsibility**: Extract skills, experience, and education from resume
+### 2. Job Analyzer
+Parses the job description into structured requirements. Flags vague postings.
 
-```typescript
-Input:  { resumeText }
-Output: { extractedSkills, experience, education }
+```
+Input:  jobDescription
+Output: requiredSkills[], preferredSkills[], experienceYears, education, isVague
 ```
 
-**Prompt Strategy**:
-- Asks Gemini to extract structured data as JSON
-- Focuses on technical skills, tools, and frameworks
-- Requests brief summaries for experience and education
+A posting is flagged vague if it has fewer than 3 specific technical skills or is under 100 characters. Vague postings skip the matcher and go directly to decisionMaker with `requiresHuman: true`.
 
-### 3. Job Analyzer Agent
-**Responsibility**: Extract requirements from job description and detect vague postings
+### 3. Matcher
+Compares the candidate profile against job requirements.
 
-```typescript
-Input:  { jobDescription }
-Output: { jobRequirements (including isVague flag) }
+```
+Input:  extractedSkills, experience, education, jobRequirements
+Output: skillMatches[], skillGaps[], preferredMatches[], experienceMatch, educationMatch
 ```
 
-**Prompt Strategy**:
-- Distinguishes between required and preferred skills
-- Extracts years of experience and education requirements
-- Returns structured JSON for easy comparison
+Instructs Gemini to apply semantic equivalence when matching (e.g. "React" matches "React.js", "ML" matches "Machine Learning").
 
-**Vague Job Detection**:
-The agent automatically detects unclear job descriptions based on:
-- **No specific required skills** extracted
-- **Generic keywords only**: "coding", "programming", "team player", "communication"
-- **Very short descriptions**: Less than 100 characters
-- **Insufficient detail**: Fewer than 3 specific technical skills
+### 4. Decision Maker
+Computes the final score deterministically, then uses Gemini only to write the reasoning text.
 
-When a vague job description is detected, the system immediately flags it for manual review and stops further processing.
-
-### 4. Matcher Agent
-**Responsibility**: Compare candidate profile with job requirements
-
-```typescript
-Input:  { extractedSkills, experience, education, jobRequirements }
-Output: { matchDetails }
+```
+Input:  matchDetails, jobRequirements
+Output: matchScore, confidence, recommendation, requiresHuman, reasoning
 ```
 
-**Matching Logic**:
-- Identifies skill overlaps and gaps
-- Evaluates experience and education alignment
-- Returns boolean flags for key criteria
+See [Scoring Model](#scoring-model) below.
 
-### 5. Decision Maker Agent
-**Responsibility**: Make final hiring recommendation
+---
 
-```typescript
-Input:  { matchDetails, experience, education, jobRequirements }
-Output: ScreeningResult
+## Scoring Model
+
+The match score is computed entirely in code — the LLM does not produce the number.
+
+```
+matchScore =
+  (required skill match ratio) × 0.55 +
+  (preferred skill match ratio) × 0.15 +
+  (experience score)            × 0.20 +
+  (education score)             × 0.10
 ```
 
-**Decision Flow**:
+**Dimension scoring:**
 
-1. **First Check**: Is the job description vague?
-   - If `jobRequirements.isVague === true`:
-     - Return "Needs manual review"
-     - Set `match_score: 0`, `confidence: 0`, `requires_human: true`
-     - Provide detailed explanation of what's missing
+| Dimension | Condition | Score |
+|---|---|---|
+| Required skills | matched / total required | 0.0 – 1.0 |
+| Preferred skills | matched / total preferred | 0.0 – 1.0 |
+| Experience | requirement not specified | 0.5 (neutral) |
+| Experience | meets requirement | 1.0 |
+| Experience | does not meet requirement | 0.25 (partial credit) |
+| Education | requirement not specified | 0.5 (neutral) |
+| Education | meets requirement | 1.0 |
+| Education | does not meet requirement | 0.35 (partial credit) |
 
-2. **If job description is clear**, proceed with standard evaluation:
+**Recommendation thresholds:**
 
-**Decision Criteria**:
-- **Score > 0.6**: "Proceed to interview"
-- **Score 0.4-0.6**: "Needs manual review"
-- **Score < 0.4**: "Reject"
-- Sets `requires_human: true` for borderline cases
+| Score | Recommendation | Human review |
+|---|---|---|
+| ≥ 0.65 | Proceed to interview | No |
+| 0.35 – 0.65 | Needs manual review | Yes |
+| < 0.35 | Reject | No |
+
+**Confidence** is computed from how many dimensions were actually specified in the job description (skills, experience, education). A fully specified JD gives a confidence up to 1.0; a sparse JD floors at 0.5.
 
 ---
 
 ## Setup & Installation
 
 ### Prerequisites
-- Node.js 20+ 
-- Google Gemini API Key ([Get one here](https://ai.google.dev/))
+- Node.js 18+
+- A [Convex](https://convex.dev) account
+- A [Google AI Studio](https://aistudio.google.com/app/apikey) account (for the Gemini API key — entered per-user in the app, not baked into the deployment)
+- Google Cloud Console OAuth credentials (for Google sign-in)
 
-### Installation Steps
+### Installation
 
-1. **Clone the repository**
 ```bash
 git clone <repository-url>
 cd resume-matching
-```
-
-2. **Install dependencies**
-```bash
 npm install
 ```
 
-3. **Set up environment variables**
+### Convex setup
 
-Create a `.env.local` file in the root directory:
-
-```env
-GEMINI_API_KEY=your_gemini_api_key_here
+```bash
+npx convex dev
 ```
 
-4. **Run the development server**
+This creates your deployment and generates `convex/_generated/`. In the Convex dashboard under **Settings → Environment Variables**, set:
+
+```
+BETTER_AUTH_SECRET     # random secret, e.g. openssl rand -base64 32
+APP_URL                # http://localhost:3001 for dev, your domain for prod
+GOOGLE_CLIENT_ID       # from Google Cloud Console
+GOOGLE_CLIENT_SECRET   # from Google Cloud Console
+```
+
+### Google OAuth setup
+
+In [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → Credentials → your OAuth 2.0 Client, add to **Authorized redirect URIs**:
+
+```
+http://localhost:3001/api/auth/callback/google
+```
+
+### Environment variables
+
+`.env.local` (auto-generated by `npx convex dev`, add the last line):
+
+```env
+CONVEX_DEPLOYMENT=...
+NEXT_PUBLIC_CONVEX_URL=...
+NEXT_PUBLIC_CONVEX_SITE_URL=...
+NEXT_PUBLIC_APP_URL=http://localhost:3001
+```
+
+### Run
+
 ```bash
 npm run dev
 ```
 
-5. **Open the app**
-Navigate to `http://localhost:3000` in your browser
+Open `http://localhost:3001`.
 
 ---
 
 ## Usage
 
-### Web Interface
+### First time
 
-1. **Upload Job Description** (.txt file)
-   - Click "Upload Job Description"
-   - Select a plain text file containing the job posting
+1. Sign up at `/sign-up` (email/password or Google)
+2. Go to **Settings** and paste your Gemini API key — it is stored in your browser's localStorage for 7 days, never on the server
 
-2. **Upload Resume** (.pdf, .doc, or .docx)
-   - Click "Upload Resume"
-   - Select the candidate's resume
+### Screening
 
-3. **Check Match**
-   - Click "Check Match" button
-   - Wait for the AI agents to process (typically 5-10 seconds)
-
-4. **Review Results**
-   - See match score (0.0-1.0)
-   - Read recommendation (Proceed/Reject/Manual Review)
-   - Check if human review is required
-   - View confidence level
-   - Read detailed reasoning
-
-### API Endpoint
-
-**POST** `/api/match`
-
-**Request**:
-```typescript
-FormData {
-  resume: File (PDF/DOCX)
-  jobDescription: string (or file)
-}
-```
-
-**Response**:
-```json
-{
-  "match_score": 0.76,
-  "recommendation": "Proceed to technical interview",
-  "requires_human": true,
-  "confidence": 0.81,
-  "reasoning_summary": "Strong backend skills with Python and Django. Limited exposure to large-scale system design. Recommend interview to assess scaling knowledge."
-}
-```
+1. Enter a position title and paste the job description
+2. Drop or browse for one or more resumes (PDF, DOCX, DOC)
+3. Click **Run screening**
+4. Results appear ranked by match score — each card shows the candidate name, match %, confidence, recommendation, reasoning, and a **View resume** button
 
 ---
 
-## Trade-offs & Assumptions
+## Trade-offs & Design Decisions
 
-### Trade-offs
+**User-provided API key** — each user brings their own Gemini key. This avoids running up costs on a shared key and keeps the LLM usage attributable. The key is stored in localStorage (7-day expiry) and sent only to your own Next.js API route, never persisted server-side.
 
-1. **AI Model Choice: Gemini 2.5 Flash**
-   - Fast response times (~2-3 seconds)
-   - Free tier available with generous limits
-   - Good JSON output quality
-   - Not as powerful as GPT-4 for complex reasoning
-   - Requires internet connection
+**Deterministic scoring** — moving score computation out of the LLM eliminates run-to-run variance. The LLM is only used for text generation (skill lists, reasoning), where minor wording variation is acceptable.
 
-2. **Sequential vs Parallel Agent Execution**
-   - Current: Sequential (one agent after another)
-   - Easier to debug and understand
-   - Clear data flow
-   - Slower than parallel execution
-   - Future: Could parallelize Job Analyzer and Skill Extractor
+**Session-based results storage** — screening results (including resume PDFs as base64) are stored in `sessionStorage` keyed by a UUID. This avoids storing potentially sensitive resume data in the database while still enabling the results page to function. Results are lost when the browser tab closes.
 
-3. **File Format Support**
-   - Supports: PDF, DOCX, DOC
-   - No support for images (screenshot resumes)
-   - No OCR for scanned PDFs
-   - Reason: Balancing complexity vs common use cases
+**Parallel pipeline** — `skillExtractor` and `jobAnalyzer` run concurrently, and all resumes are processed concurrently via `Promise.all`. For a batch of 5 resumes the wall-clock time is roughly the same as processing one.
 
-4. **No Database/Persistence**
-   - All processing is stateless
-   - Simpler deployment
-   - No data privacy concerns
-   - Can't track historical decisions
-   - No learning from past matches
-
-### Assumptions
-
-1. **Resume Quality**
-   - Assumes resumes are text-based PDFs/DOCX
-   - Assumes reasonable formatting (not overly stylized)
-
-2. **Job Descriptions**
-   - Assumes plain text format
-   - Assumes descriptions include skills, experience requirements
-
-3. **Scoring Thresholds**
-   - Score > 0.6 = Good match (arbitrary but reasonable)
-   - Could be tuned based on company hiring standards
-
-4. **Language**
-   - Assumes English language inputs
-   - Gemini can handle other languages but prompts are English-optimized
-
----
-
-## Error Handling
-
-The system implements **graceful degradation** at every step:
-
-### 1. File Parsing Errors
-```typescript
-// If PDF parsing fails
-catch (error) {
-  return {
-    recommendation: "Needs manual review",
-    requires_human: true,
-    reasoning_summary: "Failed to parse resume: [error]. Please verify file format."
-  };
-}
-```
-
-### 2. AI API Failures
-- Catches network errors
-- Handles invalid JSON responses
-- Returns manual review recommendation on failure
-
-### 3. Vague Job Descriptions
-```typescript
-// Automatically detected and flagged
-if (jobRequirements.isVague) {
-  return {
-    recommendation: "Needs manual review",
-    requires_human: true,
-    reasoning_summary: "Job description lacks specific technical requirements..."
-  };
-}
-```
-
-### 4. Input Validation
-- Checks file extensions before processing
-- Validates buffer sizes
-- Ensures text extraction produced content
-
-### 5. State Recovery
-Each agent catches its own errors and returns a fallback state, preventing the entire pipeline from crashing.
-
----
-
-## Future Improvements
-
-1. **LangGraph Integration**
-   - Replace custom orchestrator with LangGraph
-   - Enable conditional routing (skip agents based on confidence)
-   - Add retry logic for failed agents
-
-2. **Human-in-the-Loop Features**
-   - Web interface for HR to review flagged cases
-   - Edit and approve AI decisions
-   - Track decision history
-
-3. **Enhanced Matching**
-   - Semantic similarity scoring (embeddings)
-   - Weighted skill matching (critical vs nice-to-have)
-   - Industry-specific scoring models
-
-4. **Performance Optimization**
-   - Cache parsed resumes
-   - Parallel agent execution where possible
-   - Batch processing for multiple candidates
-
-5. **Advanced File Support**
-   - OCR for scanned PDFs
-   - Image resume parsing
-   - LinkedIn profile import
-
-6. **Analytics Dashboard**
-   - Track match score distributions
-   - Monitor agent performance
-   - A/B test different prompts
-
-7. **Multi-Language Support**
-   - Detect resume language
-   - Translate to English for processing
-   - Return results in original language
-
-8. **Testing Infrastructure**
-   - Comprehensive unit tests for all agents
-   - Integration tests with mock AI responses
-   - E2E tests with Playwright
-   - Continuous monitoring of AI output quality
+**Auth proxy** — BetterAuth runs on Convex's HTTP router. To avoid CORS issues, all `/api/auth/*` requests go through a Next.js catch-all proxy route that forwards server-to-server to Convex.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE) for details.
