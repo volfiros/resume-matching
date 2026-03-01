@@ -18,6 +18,11 @@ const syne = Syne({
 export const metadata: Metadata = {
   title: "SIFT — AI Resume Screening",
   description: "AI-powered resume screening. Match candidates to job descriptions instantly.",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
